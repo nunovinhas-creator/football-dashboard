@@ -194,6 +194,10 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 .extra-pill.hot-blue span{color:var(--blue)}
 
 /* FOOTER */
+.tabs{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}
+.tab{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}
+.tab:hover{color:var(--sub)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
 .footer{
   text-align:center;padding:28px;font-size:.68rem;
   color:var(--muted);border-top:1px solid var(--border);
@@ -212,8 +216,12 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 <div class="header">
   <div class="header-left">
     <h1>⚽ Matemática Da Bola</h1>
-    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-05-18 14:34 UTC</div>
+    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-05-18 14:48 UTC</div>
   </div>
+</div>
+<div class="tabs">
+  <a href="dashboard.html" class="tab active">📊 Dashboard</a>
+  <a href="backtest.html"  class="tab">🔬 Backtest</a>
 </div>
 <div class="stats-strip">
   <div class="stat-item"><div class="stat-n" style="color:var(--blue)">16</div><div class="stat-l">Jogos hoje</div></div>
