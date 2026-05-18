@@ -13,145 +13,56 @@
   gtag('config', 'G-WE48R4KL96');
 </script>
 <style>
-  :root {
-    --bg:#0f1117; --card:#1a1d27; --border:#2a2d3a;
-    --accent:#4f8ef7; --green:#4CAF50; --text:#e0e0e0; --muted:#888;
-  }
+  :root{--bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;--accent:#4f8ef7;--green:#4CAF50;--text:#e0e0e0;--muted:#777}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;padding:20px;max-width:900px;margin:0 auto}
-  h1{color:var(--accent);font-size:1.5rem;margin-bottom:4px}
-  .sub{color:var(--muted);font-size:.82rem;margin-bottom:22px}
-  .stats-bar{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
-  .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 20px}
-  .stat .n{font-size:1.7rem;font-weight:700;color:var(--accent)}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;padding:24px 20px;max-width:860px;margin:0 auto}
+  header{margin-bottom:24px}
+  header h1{color:var(--accent);font-size:1.6rem;font-weight:800;letter-spacing:-.3px}
+  header p{color:var(--muted);font-size:.8rem;margin-top:4px}
+  .stats-bar{display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 22px;min-width:120px}
+  .stat .n{font-size:2rem;font-weight:800;color:var(--accent);line-height:1}
   .stat .n.green{color:var(--green)}
-  .stat .l{font-size:.72rem;color:var(--muted);margin-top:2px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
-  .card-header{display:flex;justify-content:space-between;margin-bottom:8px}
-  .league-tag{font-size:.78rem;color:var(--accent);font-weight:600}
-  .ko{font-size:.78rem;color:var(--muted)}
-  .teams{font-size:1.08rem;font-weight:700;margin-bottom:14px}
-  .vs{color:var(--muted);font-weight:400;margin:0 8px}
-  .pred-grid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
-  .pred-item{background:#23263a;border-radius:6px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;min-width:54px}
-  .pred-item .label{font-size:.68rem;color:var(--muted)}
-  .pred-item .val{font-size:.93rem;font-weight:600}
-  .divider{height:1px;background:var(--border);margin:10px 0}
-  .value-block{display:flex;flex-direction:column;gap:6px}
-  .value-row{display:flex;align-items:center;gap:10px;font-size:.81rem;background:#1e2a1e;border:1px solid #2d4a2d;border-radius:6px;padding:6px 10px;flex-wrap:wrap}
-  .badge-val{background:var(--green);color:#000;font-size:.67rem;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0}
-  .edge{color:var(--green);font-weight:700;margin-left:auto}
-  .no-data,.no-value{font-size:.79rem;color:var(--muted);font-style:italic}
-  .footer{text-align:center;font-size:.73rem;color:var(--muted);margin-top:30px;padding-top:16px;border-top:1px solid var(--border)}
+  .stat .l{font-size:.72rem;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;transition:border-color .2s}
+  .card:hover{border-color:#4f8ef755}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .league-tag{font-size:.75rem;color:var(--accent);font-weight:700;letter-spacing:.3px}
+  .ko{font-size:.75rem;color:var(--muted)}
+  .teams{font-size:1.15rem;font-weight:700;margin-bottom:16px;letter-spacing:-.2px}
+  .vs{color:var(--muted);font-weight:400;margin:0 8px;font-size:.95rem}
+  .pred-grid{display:flex;gap:8px}
+  .pred-item{background:#1e2130;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;align-items:center;flex:1}
+  .pred-item .label{font-size:.68rem;color:var(--muted);margin-bottom:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .pred-item .val{font-size:1rem;font-weight:700;color:var(--text)}
+  .value-block{display:flex;flex-direction:column;gap:7px}
+  .value-row{display:flex;align-items:center;gap:10px;font-size:.82rem;background:#162016;border:1px solid #2a432a;border-radius:8px;padding:8px 12px;flex-wrap:wrap}
+  .badge-val{background:var(--green);color:#000;font-size:.68rem;font-weight:800;padding:3px 7px;border-radius:5px;flex-shrink:0;letter-spacing:.3px}
+  .edge{color:var(--green);font-weight:800;margin-left:auto}
+  .no-value{font-size:.78rem;color:var(--muted);font-style:italic}
+  .no-data-section{background:#1a1a1a;border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:20px}
+  .no-data-title{font-size:.82rem;color:var(--muted);margin-bottom:8px}
+  .no-data-list{list-style:none;font-size:.78rem;color:#555;line-height:1.8}
+  .footer{text-align:center;font-size:.72rem;color:#444;margin-top:36px;padding-top:16px;border-top:1px solid var(--border)}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 </style>
 </head>
 <body>
-<h1>⚽ Football Dashboard</h1>
-<p class="sub">Gerado em 2026-05-18 09:39 UTC · BSD CatBoost ML · Value threshold: +3% vs Pinnacle</p>
+<header>
+  <h1>⚽ Football Dashboard</h1>
+  <p>Gerado em 2026-05-18 13:15 UTC · BSD CatBoost ML · Value threshold: +3% vs Pinnacle</p>
+</header>
 <div class="stats-bar">
-  <div class="stat"><div class="n">5</div><div class="l">Jogos hoje</div></div>
-  <div class="stat"><div class="n green">0</div><div class="l">Com value detectado</div></div>
+  <div class="stat"><div class="n">0</div><div class="l">Jogos com dados</div></div>
+  <div class="stat"><div class="n green">0</div><div class="l">Com value</div></div>
+  <div class="stat"><div class="n" style="color:var(--muted);font-size:1.4rem">5</div><div class="l">Total jogos</div></div>
 </div>
+<div class="empty">Sem predições disponíveis hoje.</div>
 
-    <div class="card">
-      <div class="card-header">
-        <span class="league-tag">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</span>
-        <span class="ko">19:00 UTC</span>
-      </div>
-      <div class="teams">Arsenal <span class="vs">vs</span> Burnley</div>
-      
-        <div class="pred-grid">
-          <div class="pred-item"><span class="label">1</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">X</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">2</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">O2.5</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">BTTS</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">xG</span><span class="val">–––</span></div>
-          <div class="pred-item"><span class="label">Score</span><span class="val">–</span></div>
+        <div class="no-data-section">
+          <p class="no-data-title">⚠️ 5 jogo(s) sem predição BSD</p>
+          <ul class="no-data-list"><li>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League · Arsenal vs Burnley</li><li>🇸🇪 Allsvenskan · Örgryte IS vs IFK Göteborg</li><li>🇸🇪 Allsvenskan · Djurgårdens IF vs IK Sirius</li><li>🇫🇮 Veikkausliiga · FC Lahti vs VPS</li><li>🇧🇷 Brasileirão Serie B · Ponte Preta vs Londrina</li></ul>
         </div>
-      <div class="divider"></div>
-      <p class="no-value">Sem value vs Pinnacle</p>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="league-tag">🇸🇪 Allsvenskan</span>
-        <span class="ko">17:00 UTC</span>
-      </div>
-      <div class="teams">Örgryte IS <span class="vs">vs</span> IFK Göteborg</div>
-      
-        <div class="pred-grid">
-          <div class="pred-item"><span class="label">1</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">X</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">2</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">O2.5</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">BTTS</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">xG</span><span class="val">–––</span></div>
-          <div class="pred-item"><span class="label">Score</span><span class="val">–</span></div>
-        </div>
-      <div class="divider"></div>
-      <p class="no-value">Sem value vs Pinnacle</p>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="league-tag">🇸🇪 Allsvenskan</span>
-        <span class="ko">17:00 UTC</span>
-      </div>
-      <div class="teams">Djurgårdens IF <span class="vs">vs</span> IK Sirius</div>
-      
-        <div class="pred-grid">
-          <div class="pred-item"><span class="label">1</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">X</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">2</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">O2.5</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">BTTS</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">xG</span><span class="val">–––</span></div>
-          <div class="pred-item"><span class="label">Score</span><span class="val">–</span></div>
-        </div>
-      <div class="divider"></div>
-      <p class="no-value">Sem value vs Pinnacle</p>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="league-tag">🇫🇮 Veikkausliiga</span>
-        <span class="ko">15:00 UTC</span>
-      </div>
-      <div class="teams">FC Lahti <span class="vs">vs</span> VPS</div>
-      
-        <div class="pred-grid">
-          <div class="pred-item"><span class="label">1</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">X</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">2</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">O2.5</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">BTTS</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">xG</span><span class="val">–––</span></div>
-          <div class="pred-item"><span class="label">Score</span><span class="val">–</span></div>
-        </div>
-      <div class="divider"></div>
-      <p class="no-value">Sem value vs Pinnacle</p>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <span class="league-tag">🇧🇷 Brasileirão Serie B</span>
-        <span class="ko">22:00 UTC</span>
-      </div>
-      <div class="teams">Ponte Preta <span class="vs">vs</span> Londrina</div>
-      
-        <div class="pred-grid">
-          <div class="pred-item"><span class="label">1</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">X</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">2</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">O2.5</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">BTTS</span><span class="val">–</span></div>
-          <div class="pred-item"><span class="label">xG</span><span class="val">–––</span></div>
-          <div class="pred-item"><span class="label">Score</span><span class="val">–</span></div>
-        </div>
-      <div class="divider"></div>
-      <p class="no-value">Sem value vs Pinnacle</p>
-    </div>
 <p class="footer">Football Dashboard · BSD API · nunovinhas-creator/football-dashboard</p>
 </body>
 </html>
