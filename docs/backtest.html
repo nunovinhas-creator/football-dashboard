@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Matemática Da Bola — Backtest</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WE48R4KL96"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config","G-WE48R4KL96");</script>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b27;--card:#1c2333;--border:#2d3748;--border-light:#3a4560;
+  --blue:#60a5fa;--green:#4ade80;--yellow:#fbbf24;--red:#f87171;--purple:#a78bfa;
+  --text:#f1f5f9;--sub:#94a3b8;--muted:#4a5568;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",system-ui,sans-serif}
+.header{background:linear-gradient(180deg,#0a0f1e,#0d1117);border-bottom:1px solid var(--border);padding:20px 28px}
+.header h1{font-size:1.5rem;font-weight:800;background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .meta{font-size:.72rem;color:var(--muted);margin-top:4px}
+.tabs{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}
+.tab{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}
+.tab:hover{color:var(--sub)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.wrap{max-width:960px;margin:0 auto;padding:24px 28px}
+.info-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+.info-bar span{font-size:.8rem;color:var(--sub)}
+.info-bar b{color:var(--text)}
+.info-bar .growing{font-size:.72rem;color:var(--muted);margin-left:auto}
+.section-title{font-size:.9rem;font-weight:700;color:var(--sub);margin:28px 0 14px;text-transform:uppercase;letter-spacing:.5px;padding-left:10px;border-left:3px solid var(--blue)}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:8px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.sc-title{font-size:1rem;font-weight:700}
+.sc-sub{font-size:.72rem;color:var(--muted);margin-top:3px}
+.sc-rate{font-size:1.8rem;font-weight:800;line-height:1}
+.rate-bar-bg{height:5px;background:var(--border);border-radius:3px;margin-bottom:14px}
+.rate-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+.trend-wrap{margin-bottom:12px}
+.trend-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.trend-bars{display:flex;align-items:flex-end;gap:4px;height:52px}
+.tb{flex:1;border-radius:3px 3px 0 0;min-width:8px;cursor:pointer;transition:opacity .15s}
+.tb:hover{opacity:.8}
+.ct{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:10px}
+.ct th{text-align:left;color:var(--muted);padding:5px 6px;font-size:.65rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.ct td{padding:6px 6px;border-bottom:1px solid #1a1f2e}
+.ct tr:last-child td{border-bottom:none}
+.td-conf{color:var(--sub)}
+.xg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.xg-item{background:#0f1420;border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.xg-val{font-size:1.3rem;font-weight:800;color:var(--green)}
+.xg-lbl{font-size:.65rem;color:var(--muted);margin-top:4px}
+.leagues-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.league-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.lc-title{font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:12px;text-transform:uppercase;letter-spacing:.4px}
+.td-league{color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-num{text-align:right}
+.no-data{font-size:.78rem;color:var(--muted);font-style:italic;padding:8px 0}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .big{font-size:3rem;margin-bottom:12px}
+.empty-state p{font-size:.88rem;line-height:1.6}
+.footer{text-align:center;padding:28px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border)}
+@media(max-width:580px){.wrap,.header{padding-left:14px;padding-right:14px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>⚽ Matemática Da Bola</h1>
+  <div class="meta">Backtest actualizado em 2026-05-18 14:54 UTC</div>
+</div>
+<div class="tabs">
+  <a href="dashboard.html" class="tab">📊 Dashboard</a>
+  <a href="backtest.html"  class="tab active">🔬 Backtest</a>
+</div>
+<div class="wrap">
+  <div class="empty-state"><div class="big">🔬</div><p>O backtest ainda não tem dados históricos.<br>Os resultados de ontem serão adicionados amanhã automaticamente.<br><br>Volta aqui daqui a alguns dias para ver as primeiras estatísticas.</p></div>
+  
+</div>
+<div class="footer">Matemática Da Bola · Backtest · Dados acumulados desde –</div>
+</body>
+</html>
