@@ -2,10 +2,10 @@ name: Football Dashboard
 
 on:
   schedule:
-    - cron: "0 7 * * *"    # 07:00 UTC — manhã (jogos do dia + resultados da noite anterior)
-    - cron: "0 14 * * *"   # 14:00 UTC — tarde (jogos iniciados, primeiros resultados)
-    - cron: "0 21 * * *"   # 21:00 UTC — noite (maioria dos jogos europeus terminados)
-    - cron: "0 0 * * *"    # 00:00 UTC — meia-noite (resultados finais do dia)
+    - cron: "0 7 * * *"    # 07:00 UTC — manhã
+    - cron: "0 14 * * *"   # 14:00 UTC — tarde
+    - cron: "0 21 * * *"   # 21:00 UTC — noite
+    - cron: "0 0 * * *"    # 00:00 UTC — meia-noite
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,6 @@ permissions:
 jobs:
   dashboard:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,10 +33,15 @@ jobs:
           TG_CHAT_ID:  ${{ secrets.TG_CHAT_ID }}
         run: python dashboard.py
 
-      - name: Commit e push do dashboard.html
+      - name: Correr backtest
+        env:
+          BSD_API_KEY: ${{ secrets.BSD_API_KEY }}
+        run: python backtest.py
+
+      - name: Commit e push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/dashboard.html
-          git diff --staged --quiet || git commit -m "dashboard: $(date -u +%Y-%m-%dT%H:%M)"
+          git add docs/dashboard.html docs/backtest.html
+          git diff --staged --quiet || git commit -m "dashboard+backtest: $(date -u +%Y-%m-%dT%H:%M)"
           git push
