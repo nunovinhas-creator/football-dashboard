@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Matemática Da Bola — 2026-05-18</title>
+<title>Matemática Da Bola — 2026-05-19</title>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WE48R4KL96"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date());gtag("config","G-WE48R4KL96");</script>
 <style>
@@ -216,7 +216,7 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 <div class="header">
   <div class="header-left">
     <h1>⚽ Matemática Da Bola</h1>
-    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-05-18 14:53 UTC</div>
+    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-05-19 07:11 UTC</div>
   </div>
 </div>
 <div class="tabs">
@@ -224,9 +224,9 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
   <a href="backtest.html"  class="tab">🔬 Backtest</a>
 </div>
 <div class="stats-strip">
-  <div class="stat-item"><div class="stat-n" style="color:var(--blue)">16</div><div class="stat-l">Jogos hoje</div></div>
-  <div class="stat-item"><div class="stat-n" style="color:var(--green)">1</div><div class="stat-l">Alta confiança</div></div>
-  <div class="stat-item"><div class="stat-n" style="color:var(--yellow)">5</div><div class="stat-l">Média confiança</div></div>
+  <div class="stat-item"><div class="stat-n" style="color:var(--blue)">41</div><div class="stat-l">Jogos hoje</div></div>
+  <div class="stat-item"><div class="stat-n" style="color:var(--green)">6</div><div class="stat-l">Alta confiança</div></div>
+  <div class="stat-item"><div class="stat-n" style="color:var(--yellow)">21</div><div class="stat-l">Média confiança</div></div>
   <div class="stat-item"><div class="stat-n" style="color:var(--green-dim)">0</div><div class="stat-l">Com resultado</div></div>
 </div>
 <div class="filters">
@@ -234,14 +234,14 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
     <span class="f-label">Liga</span>
     <select class="filter-select" id="f-league" onchange="applyFilters()">
       <option value="">Todas</option>
-      <option value="Allsvenskan">🇸🇪 Allsvenskan</option><option value="Brasileirão Serie B">🇧🇷 Brasileirão Serie B</option><option value="Ekstraklasa">🇵🇱 Ekstraklasa</option><option value="Parva Liga">🇧🇬 Parva Liga</option><option value="Premier League">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option><option value="Segunda División">🇪🇸 Segunda División</option><option value="Super League">🇨🇭 Super League</option><option value="Superliga">🇷🇴 Superliga</option><option value="Veikkausliiga">🇫🇮 Veikkausliiga</option>
+      <option value="Allsvenskan">🇸🇪 Allsvenskan</option><option value="Chinese Super League">🇨🇳 Chinese Super League</option><option value="Copa Libertadores">🌎 Copa Libertadores</option><option value="Copa Sudamericana">🌎 Copa Sudamericana</option><option value="Coupe de Tunisie">🇹🇳 Coupe de Tunisie</option><option value="Eliteserien">🇳🇴 Eliteserien</option><option value="Eredivisie">🇳🇱 Eredivisie</option><option value="Europa League">🏆 Europa League</option><option value="Premier League">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option><option value="Pro League">🇧🇪 Pro League</option><option value="Saudi Pro League">🇧🇪 Saudi Pro League</option><option value="Veikkausliiga">🇫🇮 Veikkausliiga</option>
     </select>
   </div>
   <div class="f-group">
     <span class="f-label">Hora</span>
     <select class="filter-select" id="f-hour" onchange="applyFilters()">
       <option value="">Qualquer</option>
-      <option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="22">22:00</option>
+      <option value="0">00:00</option><option value="2">02:00</option><option value="11">11:00</option><option value="12">12:00</option><option value="14">14:00</option><option value="15">15:00</option><option value="16">16:00</option><option value="17">17:00</option><option value="18">18:00</option><option value="19">19:00</option><option value="22">22:00</option>
     </select>
   </div>
   <div class="f-divider"></div>
@@ -263,22 +263,382 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 </div>
 <div class="cards-wrap" id="cards">
 
-    <div class="card" data-league="Veikkausliiga" data-hour="15" data-conf="BAIXA" data-hw="29" data-dr="28" data-aw="41" data-o25="24" data-btts="37" data-xgtotal="2.69">
+    <div class="card" data-league="Chinese Super League" data-hour="11" data-conf="BAIXA" data-hw="37" data-dr="38" data-aw="23" data-o25="40" data-btts="54" data-xgtotal="2.9">
       <div class="card-top">
-        <div class="league-pill">🇫🇮 Veikkausliiga</div>
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
         <div class="card-right">
           <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 15:00</span>
+          <span class="ko-time">🕐 19/05 11:35</span>
         </div>
       </div>
       <div class="card-body">
         <div class="teams-row">
-          <span class="team home-team">FC Lahti</span>
+          <span class="team home-team">Tianjin Jinmen Tiger</span>
           <div class="score-area">
           <div class="predicted-score">1-1</div>
           <div class="score-label">Previsão</div>
         </div>
-          <span class="team away-team">VPS</span>
+          <span class="team away-team">Henan FC</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">37%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">38%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">23%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:23%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>40%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>54%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.6–1.3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Chinese Super League" data-hour="11" data-conf="BAIXA" data-hw="35" data-dr="26" data-aw="38" data-o25="61" data-btts="62" data-xgtotal="2.8">
+      <div class="card-top">
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 11:35</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Shenzhen Peng City</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Dalian Yingbo FC</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">35%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:35%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">26%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">38%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>61%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>62%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.5–1.3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Chinese Super League" data-hour="12" data-conf="ALTA" data-hw="81" data-dr="11" data-aw="6" data-o25="66" data-btts="49" data-xgtotal="3.2">
+      <div class="card-top">
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+          <span class="ko-time">🕐 19/05 12:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Chengdu Rongcheng</span>
+          <div class="score-area">
+          <div class="predicted-score">2-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Shanghai Port</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">81%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:81%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">11%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:11%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">6%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:6%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>66%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>49%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>2.1–1.1</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Chinese Super League" data-hour="12" data-conf="BAIXA" data-hw="30" data-dr="37" data-aw="31" data-o25="40" data-btts="71" data-xgtotal="2.5">
+      <div class="card-top">
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 12:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Qingdao West Coast</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Beijing Guoan</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">30%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:30%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">37%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">31%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:31%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>40%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>71%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.1–1.4</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Pro League" data-hour="18" data-conf="MÉDIA" data-hw="58" data-dr="22" data-aw="19" data-o25="63" data-btts="56" data-xgtotal="2.51">
+      <div class="card-top">
+        <div class="league-pill">🇧🇪 Pro League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 19/05 18:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">RC Sporting Charleroi</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Oud-Heverlee Leuven</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">58%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:58%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">22%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:22%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">19%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:19%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>63%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>56%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.43–1.08</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Premier League" data-hour="18" data-conf="MÉDIA" data-hw="30" data-dr="21" data-aw="47" data-o25="66" data-btts="62" data-xgtotal="3.16">
+      <div class="card-top">
+        <div class="league-pill">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 19/05 18:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Bournemouth</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Manchester City</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Over 2.5 Golos</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">30%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:30%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">47%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:47%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>66%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>62%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.5–1.66</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Pro League" data-hour="18" data-conf="MÉDIA" data-hw="15" data-dr="19" data-aw="64" data-o25="63" data-btts="68" data-xgtotal="3.28">
+      <div class="card-top">
+        <div class="league-pill">🇧🇪 Pro League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 19/05 18:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">KVC Westerlo</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Standard Liège</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Fora</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">15%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:15%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">19%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:19%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">64%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:64%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>63%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>68%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.39–1.89</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Pro League" data-hour="18" data-conf="BAIXA" data-hw="44" data-dr="26" data-aw="29" data-o25="63" data-btts="60" data-xgtotal="3.4">
+      <div class="card-top">
+        <div class="league-pill">🇧🇪 Pro League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 18:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">KRC Genk</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Royal Antwerp FC</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">44%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:44%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">26%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">29%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:29%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>63%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>60%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.85–1.55</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Premier League" data-hour="19" data-conf="BAIXA" data-hw="29" data-dr="28" data-aw="42" data-o25="44" data-btts="53" data-xgtotal="2.4">
+      <div class="card-top">
+        <div class="league-pill">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 19:15</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Chelsea</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Tottenham Hotspur</span>
         </div>
         <div class="tip-row">
           <span class="tip-badge">💡 Resultado incerto</span>
@@ -296,34 +656,529 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
           </div>
           <div class="prob-col winner">
             <div class="prob-name">Fora</div>
-            <div class="prob-val">41%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:41%;background:#60a5fa"></div></div>
+            <div class="prob-val">42%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:42%;background:#60a5fa"></div></div>
           </div>
         </div>
         <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>24%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>37%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.06–1.63</span></div>
+          <div class="extra-pill">⚽ Over 2.5 <span>44%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>53%</span></div>
+          <div class="extra-pill">📊 xG <span>1.21–1.19</span></div>
         </div>
       </div>
     </div>
 
-    <div class="card" data-league="Parva Liga" data-hour="16" data-conf="MÉDIA" data-hw="45" data-dr="35" data-aw="19" data-o25="37" data-btts="46" data-xgtotal="2.6">
+    <div class="card" data-league="Copa Libertadores" data-hour="22" data-conf="MÉDIA" data-hw="63" data-dr="19" data-aw="16" data-o25="44" data-btts="33" data-xgtotal="3.79">
       <div class="card-top">
-        <div class="league-pill">🇧🇬 Parva Liga</div>
+        <div class="league-pill">🌎 Copa Libertadores</div>
         <div class="card-right">
           <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
-          <span class="ko-time">🕐 18/05 16:30</span>
+          <span class="ko-time">🕐 19/05 22:00</span>
         </div>
       </div>
       <div class="card-body">
         <div class="teams-row">
-          <span class="team home-team">Beroe Stara Zagora</span>
+          <span class="team home-team">Rosario Central</span>
+          <div class="score-area">
+          <div class="predicted-score">2-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Universidad Central</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">63%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:63%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">19%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:19%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">16%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:16%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>44%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>33%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>2.64–1.15</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="22" data-conf="ALTA" data-hw="69" data-dr="18" data-aw="12" data-o25="32" data-btts="18" data-xgtotal="1.32">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+          <span class="ko-time">🕐 19/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Montevideo City Torque</span>
+          <div class="score-area">
+          <div class="predicted-score">0-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Deportivo Riestra</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">69%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:69%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">18%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:18%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">12%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:12%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>18%</span></div>
+          <div class="extra-pill">📊 xG <span>0.62–0.7</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="22" data-conf="BAIXA" data-hw="37" data-dr="38" data-aw="24" data-o25="32" data-btts="27" data-xgtotal="2.18">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Audax Italiano</span>
+          <div class="score-area">
+          <div class="predicted-score">0-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Barracas Central</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">37%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">38%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">24%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:24%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>27%</span></div>
+          <div class="extra-pill">📊 xG <span>0.77–1.41</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Libertadores" data-hour="22" data-conf="BAIXA" data-hw="34" data-dr="35" data-aw="29" data-o25="37" data-btts="46" data-xgtotal="2.1">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Libertadores</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Fluminense</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Bolívar</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">34%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">35%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:35%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">29%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:29%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>37%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>46%</span></div>
+          <div class="extra-pill">📊 xG <span>1.07–1.03</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Libertadores" data-hour="22" data-conf="BAIXA" data-hw="44" data-dr="26" data-aw="29" data-o25="34" data-btts="47" data-xgtotal="2.57">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Libertadores</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 19/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Coquimbo Unido</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Deportes Tolima</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">44%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:44%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">26%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">29%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:29%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>34%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>47%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.42–1.15</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="0" data-conf="MÉDIA" data-hw="51" data-dr="26" data-aw="21" data-o25="32" data-btts="39" data-xgtotal="2.53">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 00:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">São Paulo</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Millonarios</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">51%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:51%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">26%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>39%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.02–1.51</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="0" data-conf="MÉDIA" data-hw="27" data-dr="23" data-aw="48" data-o25="32" data-btts="27" data-xgtotal="2.38">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 00:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Boston River</span>
+          <div class="score-area">
+          <div class="predicted-score">0-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">O'Higgins</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">27%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:27%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">23%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:23%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">48%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:48%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>27%</span></div>
+          <div class="extra-pill">📊 xG <span>0.77–1.61</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Libertadores" data-hour="0" data-conf="MÉDIA" data-hw="17" data-dr="29" data-aw="53" data-o25="35" data-btts="63" data-xgtotal="1.51">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Libertadores</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 00:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Independiente Santa Fe</span>
+          <div class="score-area">
+          <div class="predicted-score">0-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Club Atlético Platense</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">17%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:17%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">29%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:29%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">53%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:53%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>35%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>63%</span></div>
+          <div class="extra-pill">📊 xG <span>0.65–0.86</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Libertadores" data-hour="0" data-conf="MÉDIA" data-hw="30" data-dr="21" data-aw="47" data-o25="28" data-btts="24" data-xgtotal="1.98">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Libertadores</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 00:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Club Always Ready</span>
+          <div class="score-area">
+          <div class="predicted-score">0-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Mirassol</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">30%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:30%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">47%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:47%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>28%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>24%</span></div>
+          <div class="extra-pill">📊 xG <span>0.86–1.12</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Libertadores" data-hour="0" data-conf="MÉDIA" data-hw="49" data-dr="22" data-aw="28" data-o25="39" data-btts="27" data-xgtotal="1.88">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Libertadores</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 00:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Boca Juniors</span>
+          <div class="score-area">
+          <div class="predicted-score">0-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Cruzeiro</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">49%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:49%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">22%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:22%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">28%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:28%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>39%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>27%</span></div>
+          <div class="extra-pill">📊 xG <span>0.89–0.99</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="2" data-conf="ALTA" data-hw="67" data-dr="20" data-aw="11" data-o25="32" data-btts="53" data-xgtotal="2.05">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+          <span class="ko-time">🕐 20/05 02:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">América de Cali</span>
           <div class="score-area">
           <div class="predicted-score">1-0</div>
           <div class="score-label">Previsão</div>
         </div>
-          <span class="team away-team">FK Septemvri Sofia</span>
+          <span class="team away-team">Tigre</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">67%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:67%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">20%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:20%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">11%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:11%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>53%</span></div>
+          <div class="extra-pill">📊 xG <span>1.23–0.82</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="2" data-conf="MÉDIA" data-hw="45" data-dr="35" data-aw="19" data-o25="32" data-btts="35" data-xgtotal="1.99">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 02:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Deportivo Cuenca</span>
+          <div class="score-area">
+          <div class="predicted-score">1-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Recoleta FC</span>
         </div>
         <div class="tip-row">
           <span class="tip-badge">💡 Resultado incerto</span>
@@ -346,569 +1201,29 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
           </div>
         </div>
         <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>37%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>46%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.6–1.0</span></div>
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>35%</span></div>
+          <div class="extra-pill">📊 xG <span>1.3–0.69</span></div>
         </div>
       </div>
     </div>
 
-    <div class="card" data-league="Parva Liga" data-hour="16" data-conf="MÉDIA" data-hw="17" data-dr="35" data-aw="46" data-o25="37" data-btts="61" data-xgtotal="1.59">
+    <div class="card" data-league="Copa Libertadores" data-hour="2" data-conf="ALTA" data-hw="81" data-dr="11" data-aw="6" data-o25="57" data-btts="50" data-xgtotal="3.27">
       <div class="card-top">
-        <div class="league-pill">🇧🇬 Parva Liga</div>
+        <div class="league-pill">🌎 Copa Libertadores</div>
         <div class="card-right">
-          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
-          <span class="ko-time">🕐 18/05 16:30</span>
+          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+          <span class="ko-time">🕐 20/05 02:00</span>
         </div>
       </div>
       <div class="card-body">
         <div class="teams-row">
-          <span class="team home-team">FK Dobrudzha Dobrich</span>
-          <div class="score-area">
-          <div class="predicted-score">0-0</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">Botev Vratsa</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Resultado incerto</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">17%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:17%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">35%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:35%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">46%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:46%;background:#60a5fa"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>37%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>61%</span></div>
-          <div class="extra-pill">📊 xG <span>0.6–0.99</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Parva Liga" data-hour="16" data-conf="BAIXA" data-hw="37" data-dr="38" data-aw="23" data-o25="37" data-btts="45" data-xgtotal="1.7">
-      <div class="card-top">
-        <div class="league-pill">🇧🇬 Parva Liga</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 16:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">Lokomotiv Sofia</span>
-          <div class="score-area">
-          <div class="predicted-score">1-0</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">Slavia Sofia</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Empate provável</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">37%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">38%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">23%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:23%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>37%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>45%</span></div>
-          <div class="extra-pill">📊 xG <span>1.21–0.49</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Parva Liga" data-hour="16" data-conf="BAIXA" data-hw="37" data-dr="37" data-aw="25" data-o25="37" data-btts="40" data-xgtotal="1.63">
-      <div class="card-top">
-        <div class="league-pill">🇧🇬 Parva Liga</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 16:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">PFK Montana 1921</span>
-          <div class="score-area">
-          <div class="predicted-score">0-0</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">FK Spartak Varna</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Empate provável</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">37%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">37%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">25%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:25%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>37%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>40%</span></div>
-          <div class="extra-pill">📊 xG <span>0.73–0.9</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Allsvenskan" data-hour="17" data-conf="BAIXA" data-hw="36" data-dr="36" data-aw="26" data-o25="38" data-btts="63" data-xgtotal="2.2">
-      <div class="card-top">
-        <div class="league-pill">🇸🇪 Allsvenskan</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 17:00</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">Örgryte IS</span>
-          <div class="score-area">
-          <div class="predicted-score">1-0</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">IFK Göteborg</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Empate provável</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">36%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:36%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">36%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:36%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">26%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>38%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>63%</span></div>
-          <div class="extra-pill">📊 xG <span>1.3–0.9</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Allsvenskan" data-hour="17" data-conf="MÉDIA" data-hw="28" data-dr="24" data-aw="47" data-o25="60" data-btts="67" data-xgtotal="3.6">
-      <div class="card-top">
-        <div class="league-pill">🇸🇪 Allsvenskan</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
-          <span class="ko-time">🕐 18/05 17:00</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">Djurgårdens IF</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">IK Sirius</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Resultado incerto</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">28%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:28%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">24%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:24%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">47%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:47%;background:#60a5fa"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>60%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>67%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.8–1.8</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Ekstraklasa" data-hour="17" data-conf="MÉDIA" data-hw="50" data-dr="25" data-aw="24" data-o25="66" data-btts="75" data-xgtotal="2.95">
-      <div class="card-top">
-        <div class="league-pill">🇵🇱 Ekstraklasa</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
-          <span class="ko-time">🕐 18/05 17:00</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">MZKS Arka Gdynia</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">Bruk-Bet Termalica Nieciecza</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Over 2.5 Golos</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col winner">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">50%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:50%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">25%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:25%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">24%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:24%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill hot-green">⚽ Over 2.5 <span>66%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>75%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.7–1.25</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Superliga" data-hour="17" data-conf="BAIXA" data-hw="41" data-dr="36" data-aw="22" data-o25="61" data-btts="66" data-xgtotal="3.0">
-      <div class="card-top">
-        <div class="league-pill">🇷🇴 Superliga</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 17:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">FC Farul Constanța</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">FC Metaloglobus București</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Resultado incerto</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col winner">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">41%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:41%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">36%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:36%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">22%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:22%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill hot-green">⚽ Over 2.5 <span>61%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>66%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.7–1.3</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Superliga" data-hour="17" data-conf="BAIXA" data-hw="34" data-dr="33" data-aw="31" data-o25="41" data-btts="54" data-xgtotal="2.7">
-      <div class="card-top">
-        <div class="league-pill">🇷🇴 Superliga</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 17:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">FC Hermannstadt</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">FCSB</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Resultado incerto</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col winner">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">34%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">33%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:33%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">31%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:31%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>41%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>54%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.3–1.4</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Superliga" data-hour="17" data-conf="BAIXA" data-hw="28" data-dr="30" data-aw="40" data-o25="56" data-btts="58" data-xgtotal="2.9">
-      <div class="card-top">
-        <div class="league-pill">🇷🇴 Superliga</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 17:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">AFC Unirea 04 Slobozia</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">UTA Arad</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Resultado incerto</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">28%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:28%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">30%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:30%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">40%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:40%;background:#60a5fa"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>56%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>58%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.4–1.5</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Superliga" data-hour="17" data-conf="BAIXA" data-hw="37" data-dr="38" data-aw="23" data-o25="44" data-btts="66" data-xgtotal="2.8">
-      <div class="card-top">
-        <div class="league-pill">🇷🇴 Superliga</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 17:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">FC Petrolul Ploiești</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">SC Oțelul Galați</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Empate provável</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col ">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">37%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:37%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col winner">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">38%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">23%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:23%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>44%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>66%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.7–1.1</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Super League" data-hour="18" data-conf="BAIXA" data-hw="43" data-dr="22" data-aw="34" data-o25="69" data-btts="72" data-xgtotal="3.15">
-      <div class="card-top">
-        <div class="league-pill">🇨🇭 Super League</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 18:15</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">FC Aarau</span>
-          <div class="score-area">
-          <div class="predicted-score">1-1</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">Grasshopper Club Zürich</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Over 2.5 Golos</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col winner">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">43%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:43%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">22%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:22%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">34%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill hot-green">⚽ Over 2.5 <span>69%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>72%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.75–1.4</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Segunda División" data-hour="18" data-conf="BAIXA" data-hw="42" data-dr="25" data-aw="32" data-o25="75" data-btts="73" data-xgtotal="3.7">
-      <div class="card-top">
-        <div class="league-pill">🇪🇸 Segunda División</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
-          <span class="ko-time">🕐 18/05 18:30</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">Leganés</span>
+          <span class="team home-team">Independiente del Valle</span>
           <div class="score-area">
           <div class="predicted-score">2-1</div>
           <div class="score-label">Previsão</div>
         </div>
-          <span class="team away-team">Huesca</span>
-        </div>
-        <div class="tip-row">
-          <span class="tip-badge">💡 Over 2.5 Golos</span>
-        </div>
-        <div class="probs-row">
-          <div class="prob-col winner">
-            <div class="prob-name">Casa</div>
-            <div class="prob-val">42%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:42%;background:#60a5fa"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Empate</div>
-            <div class="prob-val">25%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:25%;background:#2d3748"></div></div>
-          </div>
-          <div class="prob-col ">
-            <div class="prob-name">Fora</div>
-            <div class="prob-val">32%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:32%;background:#2d3748"></div></div>
-          </div>
-        </div>
-        <div class="extra-row">
-          <div class="extra-pill hot-green">⚽ Over 2.5 <span>75%</span></div>
-          <div class="extra-pill hot-green">🔁 BTTS <span>73%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>2.1–1.6</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card" data-league="Premier League" data-hour="19" data-conf="ALTA" data-hw="80" data-dr="13" data-aw="6" data-o25="73" data-btts="48" data-xgtotal="2.73">
-      <div class="card-top">
-        <div class="league-pill">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
-        <div class="card-right">
-          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
-          <span class="ko-time">🕐 18/05 19:00</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="teams-row">
-          <span class="team home-team">Arsenal</span>
-          <div class="score-area">
-          <div class="predicted-score">1-0</div>
-          <div class="score-label">Previsão</div>
-        </div>
-          <span class="team away-team">Burnley</span>
+          <span class="team away-team">Libertad</span>
         </div>
         <div class="tip-row">
           <span class="tip-badge">💡 Vitória Casa</span>
@@ -916,13 +1231,13 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
         <div class="probs-row">
           <div class="prob-col winner">
             <div class="prob-name">Casa</div>
-            <div class="prob-val">80%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:80%;background:#60a5fa"></div></div>
+            <div class="prob-val">81%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:81%;background:#60a5fa"></div></div>
           </div>
           <div class="prob-col ">
             <div class="prob-name">Empate</div>
-            <div class="prob-val">13%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:13%;background:#2d3748"></div></div>
+            <div class="prob-val">11%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:11%;background:#2d3748"></div></div>
           </div>
           <div class="prob-col ">
             <div class="prob-name">Fora</div>
@@ -931,29 +1246,74 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
           </div>
         </div>
         <div class="extra-row">
-          <div class="extra-pill hot-green">⚽ Over 2.5 <span>73%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>48%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.84–0.89</span></div>
+          <div class="extra-pill">⚽ Over 2.5 <span>57%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>50%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>2.1–1.17</span></div>
         </div>
       </div>
     </div>
 
-    <div class="card" data-league="Brasileirão Serie B" data-hour="22" data-conf="MÉDIA" data-hw="57" data-dr="22" data-aw="19" data-o25="41" data-btts="54" data-xgtotal="2.65">
+    <div class="card" data-league="Chinese Super League" data-hour="11" data-conf="MÉDIA" data-hw="28" data-dr="21" data-aw="50" data-o25="52" data-btts="69" data-xgtotal="2.7">
       <div class="card-top">
-        <div class="league-pill">🇧🇷 Brasileirão Serie B</div>
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
         <div class="card-right">
           <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
-          <span class="ko-time">🕐 18/05 22:00</span>
+          <span class="ko-time">🕐 20/05 11:00</span>
         </div>
       </div>
       <div class="card-body">
         <div class="teams-row">
-          <span class="team home-team">Ponte Preta</span>
+          <span class="team home-team">Liaoning Tieren FC</span>
           <div class="score-area">
-          <div class="predicted-score">1-0</div>
+          <div class="predicted-score">0-1</div>
           <div class="score-label">Previsão</div>
         </div>
-          <span class="team away-team">Londrina</span>
+          <span class="team away-team">Qingdao Hainiu</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">28%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:28%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">50%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:50%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>52%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>69%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>0.9–1.8</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Chinese Super League" data-hour="11" data-conf="ALTA" data-hw="69" data-dr="21" data-aw="9" data-o25="74" data-btts="60" data-xgtotal="3.6">
+      <div class="card-top">
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+          <span class="ko-time">🕐 20/05 11:35</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Shanghai Shenhua</span>
+          <div class="score-area">
+          <div class="predicted-score">2-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Wuhan Three Towns</span>
         </div>
         <div class="tip-row">
           <span class="tip-badge">💡 Vitória Casa</span>
@@ -961,8 +1321,683 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
         <div class="probs-row">
           <div class="prob-col winner">
             <div class="prob-name">Casa</div>
-            <div class="prob-val">57%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:57%;background:#60a5fa"></div></div>
+            <div class="prob-val">69%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:69%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">9%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:9%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>74%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>60%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>2.4–1.2</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Chinese Super League" data-hour="12" data-conf="MÉDIA" data-hw="28" data-dr="21" data-aw="50" data-o25="52" data-btts="76" data-xgtotal="2.9">
+      <div class="card-top">
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 12:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Zhejiang</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Shandong Taishan</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">28%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:28%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">50%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:50%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>52%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>76%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.5–1.4</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Chinese Super League" data-hour="12" data-conf="BAIXA" data-hw="34" data-dr="34" data-aw="31" data-o25="73" data-btts="82" data-xgtotal="3.1">
+      <div class="card-top">
+        <div class="league-pill">🇨🇳 Chinese Super League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 20/05 12:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Chongqing Tonglianglong FC</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Yunnan Yukun</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Over 2.5 Golos</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">34%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">34%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">31%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:31%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>73%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>82%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.5–1.6</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Coupe de Tunisie" data-hour="14" data-conf="MÉDIA" data-hw="22" data-dr="59" data-aw="18" data-o25="14" data-btts="20" data-xgtotal="2.45">
+      <div class="card-top">
+        <div class="league-pill">🇹🇳 Coupe de Tunisie</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 14:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">ES Zarzis</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">CA Bizertin</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">22%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:22%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">59%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:59%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">18%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:18%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>14%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>20%</span></div>
+          <div class="extra-pill">📊 xG <span>1.3–1.15</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Coupe de Tunisie" data-hour="14" data-conf="BAIXA" data-hw="38" data-dr="26" data-aw="35" data-o25="61" data-btts="66" data-xgtotal="3.5">
+      <div class="card-top">
+        <div class="league-pill">🇹🇳 Coupe de Tunisie</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 20/05 14:30</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">CS Sfaxien</span>
+          <div class="score-area">
+          <div class="predicted-score">0-2</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Stade Gabèsien</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">38%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">26%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">35%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:35%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>61%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>66%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.0–2.5</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Veikkausliiga" data-hour="15" data-conf="MÉDIA" data-hw="27" data-dr="26" data-aw="45" data-o25="46" data-btts="50" data-xgtotal="2.14">
+      <div class="card-top">
+        <div class="league-pill">🇫🇮 Veikkausliiga</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 15:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Ilves</span>
+          <div class="score-area">
+          <div class="predicted-score">0-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Inter Turku</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">27%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:27%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">26%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:26%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">45%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:45%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>46%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>50%</span></div>
+          <div class="extra-pill">📊 xG <span>0.84–1.3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Eliteserien" data-hour="16" data-conf="MÉDIA" data-hw="15" data-dr="23" data-aw="61" data-o25="64" data-btts="54" data-xgtotal="3.29">
+      <div class="card-top">
+        <div class="league-pill">🇳🇴 Eliteserien</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 16:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">IK Start</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Bodø/Glimt</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Fora</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">15%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:15%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">23%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:23%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">61%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:61%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>64%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>54%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.33–1.96</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Veikkausliiga" data-hour="16" data-conf="BAIXA" data-hw="39" data-dr="39" data-aw="21" data-o25="26" data-btts="43" data-xgtotal="2.84">
+      <div class="card-top">
+        <div class="league-pill">🇫🇮 Veikkausliiga</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 20/05 16:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Kuopion Palloseura</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">FF Jaro</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">39%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:39%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">39%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:39%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>26%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>43%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.58–1.26</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Eredivisie" data-hour="16" data-conf="ALTA" data-hw="73" data-dr="18" data-aw="7" data-o25="45" data-btts="44" data-xgtotal="1.9">
+      <div class="card-top">
+        <div class="league-pill">🇳🇱 Eredivisie</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+          <span class="ko-time">🕐 20/05 16:45</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Willem II Tilburg</span>
+          <div class="score-area">
+          <div class="predicted-score">1-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">FC Volendam</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">73%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:73%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">18%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:18%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">7%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:7%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>45%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>44%</span></div>
+          <div class="extra-pill">📊 xG <span>1.19–0.71</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Allsvenskan" data-hour="17" data-conf="BAIXA" data-hw="33" data-dr="32" data-aw="34" data-o25="46" data-btts="57" data-xgtotal="3.1">
+      <div class="card-top">
+        <div class="league-pill">🇸🇪 Allsvenskan</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 20/05 17:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">GAIS</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Hammarby IF</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">33%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:33%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">32%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:32%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">34%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>46%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>57%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.3–1.8</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Eliteserien" data-hour="17" data-conf="MÉDIA" data-hw="55" data-dr="25" data-aw="18" data-o25="61" data-btts="44" data-xgtotal="2.59">
+      <div class="card-top">
+        <div class="league-pill">🇳🇴 Eliteserien</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 17:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Lillestrøm SK</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Kristiansund BK</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">55%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:55%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">25%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:25%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">18%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:18%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>61%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>44%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.36–1.23</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Saudi Pro League" data-hour="18" data-conf="MÉDIA" data-hw="28" data-dr="20" data-aw="50" data-o25="64" data-btts="66" data-xgtotal="2.88">
+      <div class="card-top">
+        <div class="league-pill">🇧🇪 Saudi Pro League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 18:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Al-Khaleej</span>
+          <div class="score-area">
+          <div class="predicted-score">0-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Al-Ahli</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">28%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:28%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">20%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:20%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">50%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:50%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>64%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>66%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>0.98–1.9</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Eliteserien" data-hour="18" data-conf="MÉDIA" data-hw="22" data-dr="25" data-aw="52" data-o25="75" data-btts="70" data-xgtotal="3.74">
+      <div class="card-top">
+        <div class="league-pill">🇳🇴 Eliteserien</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 18:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Aalesunds FK</span>
+          <div class="score-area">
+          <div class="predicted-score">1-2</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">SK Brann</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Over 2.5 Golos</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">22%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:22%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">25%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:25%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">52%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:52%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>75%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>70%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.46–2.28</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Saudi Pro League" data-hour="18" data-conf="BAIXA" data-hw="34" data-dr="34" data-aw="31" data-o25="73" data-btts="75" data-xgtotal="3.26">
+      <div class="card-top">
+        <div class="league-pill">🇧🇪 Saudi Pro League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 20/05 18:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Al-Najma SC</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Al-Shabab</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Over 2.5 Golos</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">34%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">34%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:34%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">31%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:31%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>73%</span></div>
+          <div class="extra-pill hot-green">🔁 BTTS <span>75%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.34–1.92</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Europa League" data-hour="19" data-conf="MÉDIA" data-hw="55" data-dr="21" data-aw="23" data-o25="61" data-btts="56" data-xgtotal="2.61">
+      <div class="card-top">
+        <div class="league-pill">🏆 Europa League</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 19:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">SC Freiburg</span>
+          <div class="score-area">
+          <div class="predicted-score">1-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Aston Villa</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">55%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:55%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">23%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:23%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill hot-green">⚽ Over 2.5 <span>61%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>56%</span></div>
+          <div class="extra-pill hot-blue">📊 xG <span>1.27–1.34</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Libertadores" data-hour="22" data-conf="MÉDIA" data-hw="55" data-dr="22" data-aw="21" data-o25="53" data-btts="51" data-xgtotal="1.66">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Libertadores</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Nacional</span>
+          <div class="score-area">
+          <div class="predicted-score">0-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Universitario de Deportes</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Vitória Casa</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col winner">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">55%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:55%;background:#60a5fa"></div></div>
           </div>
           <div class="prob-col ">
             <div class="prob-name">Empate</div>
@@ -971,20 +2006,110 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
           </div>
           <div class="prob-col ">
             <div class="prob-name">Fora</div>
-            <div class="prob-val">19%</div>
-            <div class="prob-bar"><div class="prob-bar-fill" style="width:19%;background:#2d3748"></div></div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
           </div>
         </div>
         <div class="extra-row">
-          <div class="extra-pill">⚽ Over 2.5 <span>41%</span></div>
-          <div class="extra-pill">🔁 BTTS <span>54%</span></div>
-          <div class="extra-pill hot-blue">📊 xG <span>1.7–0.95</span></div>
+          <div class="extra-pill">⚽ Over 2.5 <span>53%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>51%</span></div>
+          <div class="extra-pill">📊 xG <span>0.99–0.67</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="22" data-conf="BAIXA" data-hw="32" data-dr="25" data-aw="42" data-o25="32" data-btts="32" data-xgtotal="1.91">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d">BAIXA</span>
+          <span class="ko-time">🕐 20/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Olimpia</span>
+          <div class="score-area">
+          <div class="predicted-score">0-1</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">Vasco da Gama</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Resultado incerto</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">32%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:32%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">25%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:25%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">42%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:42%;background:#60a5fa"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>32%</span></div>
+          <div class="extra-pill">📊 xG <span>0.91–1.0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-league="Copa Sudamericana" data-hour="22" data-conf="MÉDIA" data-hw="17" data-dr="61" data-aw="21" data-o25="32" data-btts="59" data-xgtotal="2.24">
+      <div class="card-top">
+        <div class="league-pill">🌎 Copa Sudamericana</div>
+        <div class="card-right">
+          <span class="conf-badge" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+          <span class="ko-time">🕐 20/05 22:00</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="teams-row">
+          <span class="team home-team">Santos</span>
+          <div class="score-area">
+          <div class="predicted-score">1-0</div>
+          <div class="score-label">Previsão</div>
+        </div>
+          <span class="team away-team">San Lorenzo</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-badge">💡 Empate provável</span>
+        </div>
+        <div class="probs-row">
+          <div class="prob-col ">
+            <div class="prob-name">Casa</div>
+            <div class="prob-val">17%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:17%;background:#2d3748"></div></div>
+          </div>
+          <div class="prob-col winner">
+            <div class="prob-name">Empate</div>
+            <div class="prob-val">61%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:61%;background:#60a5fa"></div></div>
+          </div>
+          <div class="prob-col ">
+            <div class="prob-name">Fora</div>
+            <div class="prob-val">21%</div>
+            <div class="prob-bar"><div class="prob-bar-fill" style="width:21%;background:#2d3748"></div></div>
+          </div>
+        </div>
+        <div class="extra-row">
+          <div class="extra-pill">⚽ Over 2.5 <span>32%</span></div>
+          <div class="extra-pill">🔁 BTTS <span>59%</span></div>
+          <div class="extra-pill">📊 xG <span>1.25–0.99</span></div>
         </div>
       </div>
     </div>
 <div class="no-results hidden" id="no-results">Nenhum jogo corresponde aos filtros.</div>
 </div>
-<div class="footer">Matemática Da Bola · 2026-05-18</div>
+<div class="footer">Matemática Da Bola · 2026-05-19</div>
 <script>
 let activeConf = null;
 let activeMarket = null;
