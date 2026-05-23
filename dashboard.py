@@ -717,49 +717,119 @@ function resetFilters() {{
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
 def send_telegram(enriched_list):
-    today = today_str()
-    with_value = [(e, detect_value(e["pred"], e["odds"])) for e in enriched_list]
-    with_value = [(e, v) for e, v in with_value if v]
+    today  = today_str()
+    blocks = []
 
-    lines = [f"⚽ *Matemática Da Bola — {today}*"]
-    lines.append(f"📋 {len(enriched_list)} jogos · ✅ {len(with_value)} com value\n")
-
-    # Tripla do dia
-    treble = load_todays_treble()
+    # ── 1. Tripla do dia ──────────────────────────────────────────────────────
+    treble  = load_todays_treble()
+    mkt_map = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     if treble:
-        mkt_map = {"BTTS": "BTTS", "1X2-H": "Casa", "1X2-D": "Empate", "1X2-A": "Fora"}
-        lines.append("🎯 *TRIPLA DO DIA*")
-        for pk in treble["picks"]:
+        picks_lines = []
+        for i, pk in enumerate(treble["picks"], 1):
+            conf = pk.get("conf", "")
             mkt  = mkt_map.get(pk["market"], pk["market"])
             odds = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
-            lines.append(f"  • {pk['league']}: {pk['home']} vs {pk['away']} — {mkt} {int(pk['prob']*100)}%{odds}")
-        if treble.get("combined_odds"):
-            lines.append(f"  💰 Odds combinadas: *{treble['combined_odds']:.2f}*")
-        lines.append("")
-
-    # Value picks
-    for e, vals in with_value:
-        m = e["match"]
-        lines.append(f"{m.get('_league_name','')}")
-        lines.append(f"*{m.get('home_team','?')} vs {m.get('away_team','?')}*")
-        for v in vals:
-            lines.append(
-                f"  ✅ {v['market']} {v['side']} | "
-                f"ML {v['ml_prob']*100:.0f}% | "
-                f"Odds {v['pin_odds']:.2f} | "
-                f"edge +{v['edge']*100:.1f}%"
+            flag = league_flag(pk["league"])
+            picks_lines.append(
+                f"`{i}` {flag} *{pk['home']} vs {pk['away']}*\n"
+                f"   {mkt} · {int(pk['prob']*100)}% · _{conf}_{odds}"
             )
-        lines.append("")
+        combined = f"\n💰 Odds combinadas: *{treble['combined_odds']:.2f}*" if treble.get("combined_odds") else ""
+        blocks.append("🎯 *TRIPLA DO DIA*\n" + "\n\n".join(picks_lines) + combined)
+    else:
+        blocks.append("🎯 *TRIPLA DO DIA*\n_Picks insuficientes hoje._")
 
-    if not with_value:
-        lines.append("_Sem value detectado hoje._")
+    # ── 2. xG do dia — candidatos Over 2.5 ───────────────────────────────────
+    xg_candidates = []
+    for e in enriched_list:
+        pred = e.get("pred", {}) or {}
+        conf_val = e.get("confidence")
+        if conf_val is None:
+            continue
+        try:
+            conf_f = float(conf_val)
+        except (TypeError, ValueError):
+            continue
+        if conf_f < 0.45:   # só ALTA e MÉDIA
+            continue
+        hx = pred.get("home_xg") or 0
+        ax = pred.get("away_xg") or 0
+        xgt = round(float(hx) + float(ax), 2)
+        if xgt < 2.9:
+            continue
+        conf_lbl = "ALTA" if conf_f >= 0.65 else "MÉDIA"
+        m = e["match"]
+        xg_candidates.append({
+            "xgt":    xgt,
+            "conf":   conf_lbl,
+            "league": m.get("_league_name", ""),
+            "home":   m.get("home_team", "?"),
+            "away":   m.get("away_team", "?"),
+        })
 
+    xg_candidates.sort(key=lambda x: -x["xgt"])
+    if xg_candidates:
+        xg_lines = []
+        for c in xg_candidates[:5]:
+            flag = league_flag(c["league"])
+            xg_lines.append(
+                f"{flag} *{c['home']} vs {c['away']}*\n"
+                f"   xG total: *{c['xgt']}* · _{c['conf']}_"
+            )
+        blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
+    else:
+        blocks.append("📈 *xG ELEVADO — Over 2.5*\n_Nenhum jogo acima de 2.9 xG com confiança alta hoje._")
+
+    # ── 3. Value com edge alto (>7%, BTTS ou Over2.5, confiança ALTA) ─────────
+    strong_value = []
+    for e in enriched_list:
+        conf_val = e.get("confidence")
+        try:
+            if conf_val is None or float(conf_val) < 0.65:
+                continue
+        except (TypeError, ValueError):
+            continue
+        vals = detect_value(e["pred"], e["odds"])
+        for v in vals:
+            if v["edge"] < 0.07:        # só edge > 7%
+                continue
+            if v["market"] not in ("BTTS", "Over2.5"):  # mercados calibrados
+                continue
+            m = e["match"]
+            strong_value.append({
+                "league": m.get("_league_name", ""),
+                "home":   m.get("home_team", "?"),
+                "away":   m.get("away_team", "?"),
+                **v,
+            })
+
+    strong_value.sort(key=lambda x: -x["edge"])
+    if strong_value:
+        val_lines = []
+        for v in strong_value[:5]:
+            flag = league_flag(v["league"])
+            mkt  = "🔁 BTTS" if v["market"] == "BTTS" else "📈 Over 2.5"
+            val_lines.append(
+                f"{flag} *{v['home']} vs {v['away']}*\n"
+                f"   {mkt} · ML {v['ml_prob']*100:.0f}% · Pinnacle @{v['pin_odds']:.2f} · edge *+{v['edge']*100:.1f}%*"
+            )
+        blocks.append("💎 *VALUE EDGE ALTO (>7%, ALTA)*\n" + "\n\n".join(val_lines))
+    else:
+        blocks.append("💎 *VALUE EDGE ALTO*\n_Nenhum pick com edge >7% e confiança ALTA hoje._")
+
+    # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    requests.post(
-        url,
-        json={"chat_id": TG_CHAT, "text": "\n".join(lines), "parse_mode": "Markdown"},
-        timeout=10,
-    )
+    header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
+    requests.post(url, json={"chat_id": TG_CHAT, "text": header, "parse_mode": "Markdown"}, timeout=10)
+    for block in blocks:
+        try:
+            requests.post(
+                url,
+                json={"chat_id": TG_CHAT, "text": block, "parse_mode": "Markdown"},
+                timeout=10,
+            )
+        except Exception as e:
+            print(f"[WARN] telegram block falhou: {e}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
