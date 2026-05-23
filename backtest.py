@@ -1236,9 +1236,6 @@ def main():
     if datetime.now(timezone.utc).hour == 7 or os.environ.get("FORCE_EMAIL"):
         send_email_report(history, trebles)
 
-if __name__ == "__main__":
-    main()
-
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def _email_html(history, trebles):  # noqa: C901
@@ -1732,3 +1729,6 @@ def send_email_report(history, trebles):
         print(f"[email] Relatório {today} enviado para {EMAIL_TO} ✓")
     except Exception as e:
         print(f"[WARN] email falhou: {e}")
+
+if __name__ == "__main__":
+    main()

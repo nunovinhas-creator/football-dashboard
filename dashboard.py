@@ -820,7 +820,10 @@ def send_telegram(enriched_list):
     # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
     header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
-    requests.post(url, json={"chat_id": TG_CHAT, "text": header, "parse_mode": "Markdown"}, timeout=10)
+    try:
+        requests.post(url, json={"chat_id": TG_CHAT, "text": header, "parse_mode": "Markdown"}, timeout=10)
+    except Exception as e:
+        print(f"[WARN] telegram header falhou: {e}")
     for block in blocks:
         try:
             requests.post(
