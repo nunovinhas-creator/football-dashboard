@@ -1241,212 +1241,473 @@ if __name__ == "__main__":
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 
-def _email_html(history, trebles):
+def _email_html(history, trebles):  # noqa: C901
     records  = migrate_picks(history.get("records", []))
-    s_btts   = calc_stats(records, "pick_btts", "hit_btts", "BTTS")
-    s_1x2    = calc_stats(records, "pick_1x2",  "hit_1x2",  "1X2")
-    s_o25    = calc_stats(records, "pick_o25",  "hit_o25",  "Over 2.5")
+    s_btts   = calc_stats(records, "pick_btts", "hit_btts", "BTTS (ALTA+MÉDIA, pb≥61%)")
+    s_1x2    = calc_stats(records, "pick_1x2",  "hit_1x2",  "1X2 (MÉDIA, best≥61%)")
+    s_o25    = calc_stats(records, "pick_o25",  "hit_o25",  "Over 2.5 (xG≥2.9, ALTA+MÉDIA)")
+    xga      = calc_xg_analysis(records)
+    lg_mon   = btts_league_monitor(records, min_games=2)
     roi      = treble_roi(trebles.get("history", []))
     today    = today_str()
 
-    # ── Tripla de hoje ────────────────────────────────────────────────────────
-    today_treble = next(
-        (t for t in trebles.get("pending", []) if t.get("date") == today),
-        None,
-    )
+    # ── helpers inline ────────────────────────────────────────────────────────
     mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     conf_col  = {"ALTA": "#16a34a", "MÉDIA": "#ca8a04", "BAIXA": "#dc2626"}
+    total_records = len(records)
+    date_min = min((r["date"] for r in records), default="–")
+    date_max = max((r["date"] for r in records), default="–")
+    processed_days = len(history.get("dates_processed", []))
+
+    def rate_col(r): return "#16a34a" if r >= 65 else ("#ca8a04" if r >= 55 else "#dc2626")
+
+    def bar_html(rate, col, h="6px"):
+        w = min(int(rate), 100)
+        return (f'<div style="height:{h};background:#e2e8f0;border-radius:3px;min-width:80px">'
+                f'<div style="width:{w}%;height:100%;background:{col};border-radius:3px"></div></div>')
+
+    def section_title(txt, mt="28px"):
+        return (f'<div style="margin:{mt} 0 14px;padding-left:10px;border-left:3px solid #1e40af;'
+                f'font-size:15px;font-weight:800;color:#1e293b">{txt}</div>')
+
+    def small_card(val, lbl, col="#1e293b"):
+        return (f'<td style="text-align:center;padding:12px 8px;border-right:1px solid #e2e8f0">'
+                f'<div style="font-size:18px;font-weight:800;color:{col}">{val}</div>'
+                f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;'
+                f'letter-spacing:0.4px;margin-top:3px">{lbl}</div></td>')
+
+    # ── 1. Tripla de hoje ─────────────────────────────────────────────────────
+    today_treble = next(
+        (t for t in trebles.get("pending", []) if t.get("date") == today), None)
 
     if today_treble:
         picks_rows = ""
         for i, pk in enumerate(today_treble["picks"], 1):
             col  = conf_col.get(pk.get("conf", ""), "#64748b")
             mkt  = mkt_label.get(pk["market"], pk["market"])
-            odds = f"@{pk['odds']:.2f}" if pk.get("odds") else "–"
+            odds = ("@" + f"{pk['odds']:.2f}") if pk.get("odds") else "odds N/D"
+            prob = int(pk["prob"] * 100)
+            conf = pk.get("conf", "")
             picks_rows += (
-                f'<tr>'
-                f'<td style="width:24px;text-align:center;background:#1e3a5f;color:#60a5fa;'
-                f'font-weight:800;font-size:12px;border-radius:50%;padding:4px">{i}</td>'
-                f'<td style="padding:8px 12px">'
-                f'  <div style="font-size:11px;color:#64748b;margin-bottom:2px">{pk["league"]}</div>'
-                f'  <div style="font-weight:700;color:#1e293b">{pk["home"]} vs {pk["away"]}</div>'
+                f'<tr style="border-bottom:1px solid #f1f5f9">'
+                f'<td style="width:28px;text-align:center;padding:10px 8px">'
+                f'  <div style="width:22px;height:22px;border-radius:50%;background:#1e3a5f;'
+                f'  color:#93c5fd;font-weight:800;font-size:11px;line-height:22px;'
+                f'  text-align:center;margin:auto">{i}</div>'
                 f'</td>'
-                f'<td style="padding:8px;white-space:nowrap;text-align:right">'
-                f'  <span style="font-size:11px;color:#475569">{mkt}</span><br>'
-                f'  <span style="font-weight:800;color:{col}">{int(pk["prob"]*100)}%</span>'
-                f'  <span style="font-size:11px;color:#94a3b8;margin-left:4px">{odds}</span>'
+                f'<td style="padding:10px 12px">'
+                f'  <div style="font-size:10px;color:#94a3b8;margin-bottom:3px">{pk["league"]}</div>'
+                f'  <div style="font-weight:700;color:#1e293b;font-size:13px">'
+                f'  {pk["home"]} <span style="color:#94a3b8">vs</span> {pk["away"]}</div>'
+                f'</td>'
+                f'<td style="padding:10px 12px;text-align:right;white-space:nowrap">'
+                f'  <span style="font-size:11px;background:#f1f5f9;color:#475569;'
+                f'  padding:2px 7px;border-radius:10px">{mkt}</span><br>'
+                f'  <span style="font-weight:800;color:{col};font-size:16px">{prob}%</span>'
+                f'  <span style="font-size:11px;color:#94a3b8;margin-left:4px">{odds}</span><br>'
+                f'  <span style="font-size:10px;font-weight:700;color:{col}">{conf}</span>'
                 f'</td>'
                 f'</tr>'
             )
-        combined = f"{today_treble['combined_odds']:.2f}" if today_treble.get("combined_odds") else "–"
+        combined = (f"{today_treble['combined_odds']:.2f}") if today_treble.get("combined_odds") else "N/D"
         treble_section = (
-            f'<h2 style="margin:0 0 12px;font-size:16px;color:#1e293b">🎯 Tripla de Hoje</h2>'
-            f'<table style="width:100%;border-collapse:collapse;background:#f8fafc;'
-            f'border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">'
+            section_title("🎯 Tripla de Hoje", mt="0")
+            + f'<table style="width:100%;border-collapse:collapse;border:1px solid #dbeafe;'
+            f'border-radius:10px;overflow:hidden;background:#f0f7ff">'
             f'<tbody>{picks_rows}</tbody>'
-            f'<tfoot><tr><td colspan="3" style="padding:8px 12px;font-size:12px;'
-            f'color:#475569;border-top:1px solid #e2e8f0">'
-            f'💰 Odds combinadas: <strong>{combined}</strong> — aposta 1u, retorno {combined}u se ganhar'
+            f'<tfoot><tr><td colspan="3" style="padding:10px 14px;font-size:12px;'
+            f'color:#1e40af;border-top:1px solid #dbeafe;background:#dbeafe">'
+            f'💰 Odds combinadas estimadas: <strong>{combined}</strong> · '
+            f'Aposta 1 unidade → retorno <strong>{combined}u</strong> se ganhar'
             f'</td></tr></tfoot></table>'
         )
     else:
         treble_section = (
-            '<h2 style="margin:0 0 12px;font-size:16px;color:#1e293b">🎯 Tripla de Hoje</h2>'
-            '<p style="color:#64748b;font-style:italic">Sem picks suficientes hoje.</p>'
+            section_title("🎯 Tripla de Hoje", mt="0")
+            + '<p style="color:#64748b;font-style:italic;padding:8px 0">'
+            'Sem picks suficientes hoje para construir tripla.</p>'
         )
 
-    # ── Stats por mercado ─────────────────────────────────────────────────────
-    def stat_row(s, emoji):
-        rate = s["rate"]
-        col  = "#16a34a" if rate >= 65 else ("#ca8a04" if rate >= 55 else "#dc2626")
-        bar  = int(rate)
+    # ── 2. Performance detalhada por mercado ──────────────────────────────────
+    def market_block(s, emoji, threshold_note):
+        overall_col = rate_col(s["rate"])
+        overall_bar = bar_html(s["rate"], overall_col, "8px")
+        conf_rows = ""
+        for c in ["ALTA", "MÉDIA", "BAIXA"]:
+            cv = s.get("by_conf", {}).get(c)
+            if not cv:
+                continue
+            cc = rate_col(cv["rate"])
+            cr = cv["rate"]
+            conf_rows += (
+                f'<tr style="border-bottom:1px solid #f8fafc">'
+                f'<td style="padding:6px 12px 6px 24px;font-size:11px;color:#475569">{c}</td>'
+                f'<td style="padding:6px 8px;text-align:center;font-size:11px;color:#64748b">'
+                f'{cv["hits"]}/{cv["picks"]}</td>'
+                f'<td style="padding:6px 12px">'
+                f'<div style="display:flex;align-items:center;gap:8px">'
+                f'{bar_html(cr, cc)}'
+                f'<span style="font-weight:700;color:{cc};font-size:11px;min-width:34px">{cr}%</span>'
+                f'</div></td>'
+                f'</tr>'
+            )
         return (
-            f'<tr style="border-bottom:1px solid #f1f5f9">'
-            f'<td style="padding:10px 12px;font-weight:600;color:#1e293b">{emoji} {s["label"]}</td>'
-            f'<td style="padding:10px 12px;text-align:center;color:#475569">'
-            f'{s["hits"]}/{s["picks"]}</td>'
-            f'<td style="padding:10px 12px;min-width:140px">'
-            f'<div style="display:flex;align-items:center;gap:8px">'
-            f'<div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px">'
-            f'<div style="width:{bar}%;height:100%;background:{col};border-radius:3px"></div></div>'
-            f'<span style="font-weight:800;color:{col};min-width:38px">{rate}%</span>'
-            f'</div></td>'
-            f'</tr>'
+            f'<tr style="border-bottom:1px solid #e2e8f0">'
+            f'<td colspan="3" style="padding:10px 14px;background:#f8fafc">'
+            f'<div style="display:flex;align-items:center;justify-content:space-between">'
+            f'<span style="font-weight:700;color:#1e293b;font-size:13px">{emoji} {s["label"]}</span>'
+            f'<span style="font-size:10px;color:#94a3b8;font-style:italic">{threshold_note}</span>'
+            f'</div>'
+            f'<div style="display:flex;align-items:center;gap:10px;margin-top:6px">'
+            f'{bar_html(s["rate"], overall_col, "10px")}'
+            f'<span style="font-size:20px;font-weight:800;color:{overall_col}">{s["rate"]}%</span>'
+            f'<span style="font-size:12px;color:#64748b">{s["hits"]}/{s["picks"]} picks</span>'
+            f'</div>'
+            f'</td></tr>'
+            + conf_rows
         )
 
     stats_section = (
-        f'<h2 style="margin:24px 0 12px;font-size:16px;color:#1e293b">📊 Performance do Modelo</h2>'
-        f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+        section_title("📊 Performance Detalhada por Mercado")
+        + f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
         f'border-radius:10px;overflow:hidden">'
         f'<thead><tr style="background:#f1f5f9">'
-        f'<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase">Mercado</th>'
-        f'<th style="padding:8px 12px;text-align:center;font-size:11px;color:#64748b;text-transform:uppercase">Picks</th>'
-        f'<th style="padding:8px 12px;font-size:11px;color:#64748b;text-transform:uppercase">Taxa de Acerto</th>'
-        f'</tr></thead>'
-        f'<tbody>'
-        f'{stat_row(s_btts,"🔁")}'
-        f'{stat_row(s_1x2, "⚽")}'
-        f'{stat_row(s_o25, "📈")}'
-        f'</tbody></table>'
+        f'<th style="padding:8px 12px;text-align:left;font-size:10px;color:#64748b;text-transform:uppercase">Mercado / Confiança</th>'
+        f'<th style="padding:8px 8px;text-align:center;font-size:10px;color:#64748b;text-transform:uppercase">H/P</th>'
+        f'<th style="padding:8px 12px;font-size:10px;color:#64748b;text-transform:uppercase">Taxa</th>'
+        f'</tr></thead><tbody>'
+        + market_block(s_btts, "🔁", "pb ≥ 61% · confiança ALTA ou MÉDIA")
+        + market_block(s_1x2,  "⚽", "best ≥ 61% · apenas confiança MÉDIA")
+        + market_block(s_o25,  "📈", "xG total ≥ 2.9 · confiança ALTA ou MÉDIA")
+        + f'</tbody></table>'
     )
 
-    # ── ROI das triplas ───────────────────────────────────────────────────────
-    roi_col = "#16a34a" if (roi["roi_pct"] or 0) >= 0 else "#dc2626"
-    if roi["roi_pct"] is not None:
-        roi_str = f'{"+" if roi["roi_pct"] >= 0 else ""}{roi["roi_pct"]}%'
+    # ── 3. Análise xG completa ────────────────────────────────────────────────
+    if xga:
+        s = xga["summary"]
+        err_col = "#16a34a" if s["avg_err"] >= -0.1 else "#dc2626"
+        sign = "+" if s["avg_err"] >= 0 else ""
+        xg_cards = (
+            f'<table style="width:100%;border-collapse:collapse">'
+            f'<tr>'
+            + small_card(s["n"], "Jogos c/ xG")
+            + small_card(str(s["avg_xg"]), "xG Médio Previsto", "#1e40af")
+            + small_card(str(s["avg_goals"]), "Golos Médios Reais", "#16a34a")
+            + small_card(sign + str(s["avg_err"]), "Erro Médio (g−xG)", err_col)
+            + small_card(str(s["under_pct"]) + "%", "Sobreavalia", "#dc2626")
+            + small_card(str(s["over_pct"]) + "%", "Subestima", "#16a34a")
+            + f'</tr></table>'
+        )
+        # Distribuição erro (buckets)
+        max_b = max(v for _, v in xga["buckets"]) or 1
+        bucket_rows = ""
+        for lbl, cnt in xga["buckets"]:
+            pct  = int(cnt / max_b * 100)
+            beg  = lbl[:1]
+            col  = "#dc2626" if beg in ("<", "−") else ("#16a34a" if beg in (">", "1") else "#ca8a04")
+            bucket_rows += (
+                f'<tr><td style="padding:3px 12px;font-size:11px;color:#475569;white-space:nowrap">{lbl}</td>'
+                f'<td style="padding:3px 8px;width:100%">{bar_html(pct, col, "12px")}</td>'
+                f'<td style="padding:3px 8px;font-size:11px;font-weight:700;color:#1e293b;text-align:right">{cnt}</td></tr>'
+            )
+        bucket_table = (
+            f'<div style="font-size:11px;color:#64748b;margin:12px 0 6px">'
+            f'Distribuição do erro (Golos − xG) — negativo = modelo sobreavalia</div>'
+            f'<table style="width:100%;border-collapse:collapse">{bucket_rows}</table>'
+        )
+        # Liga calibração — top 8 sorted by |diff|
+        lg_rows = ""
+        for lg in sorted(xga["league_stats"], key=lambda x: abs(x["diff"]), reverse=True)[:8]:
+            diff = lg["diff"]
+            dc   = "#dc2626" if diff < -0.3 else ("#16a34a" if diff > 0.3 else "#ca8a04")
+            ds   = ("+" if diff >= 0 else "") + f"{diff:.2f}"
+            flag = "⚠️ " if abs(diff) > 0.8 else ""
+            lg_rows += (
+                f'<tr style="border-bottom:1px solid #f8fafc">'
+                f'<td style="padding:5px 12px;font-size:11px;color:#1e293b">{flag}{lg["league"]}</td>'
+                f'<td style="padding:5px 8px;text-align:center;font-size:10px;color:#94a3b8">{lg["n"]}</td>'
+                f'<td style="padding:5px 8px;text-align:center;font-size:11px;color:#1e40af">{lg["avg_xg"]:.2f}</td>'
+                f'<td style="padding:5px 8px;text-align:center;font-size:11px;color:#16a34a">{lg["avg_goals"]:.2f}</td>'
+                f'<td style="padding:5px 12px;text-align:right;font-weight:700;color:{dc}">{ds}</td>'
+                f'</tr>'
+            )
+        lg_table = (
+            f'<div style="font-size:11px;color:#64748b;margin:14px 0 6px">'
+            f'Calibração por liga (mín. 3 jogos) · ordenado por desvio absoluto · ⚠️ = desvio &gt; 0.8</div>'
+            f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'
+            f'<thead><tr style="background:#f1f5f9">'
+            f'<th style="padding:6px 12px;text-align:left;font-size:10px;color:#64748b">Liga</th>'
+            f'<th style="padding:6px 8px;font-size:10px;color:#64748b">N</th>'
+            f'<th style="padding:6px 8px;font-size:10px;color:#1e40af">xG</th>'
+            f'<th style="padding:6px 8px;font-size:10px;color:#16a34a">Golos</th>'
+            f'<th style="padding:6px 12px;font-size:10px;color:#64748b">Δ</th>'
+            f'</tr></thead><tbody>{lg_rows}</tbody></table>'
+        )
+        xg_section = (
+            section_title("🔬 Análise xG Completa")
+            + f'<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">'
+            f'<div style="padding:14px 0">{xg_cards}</div>'
+            f'<div style="border-top:1px solid #e2e8f0;padding:14px 0">{bucket_table}</div>'
+            f'<div style="border-top:1px solid #e2e8f0;padding:14px 0">{lg_table}</div>'
+            f'</div>'
+        )
     else:
-        roi_str = "N/D (odds não disponíveis nos dados históricos)"
+        xg_section = ""
 
-    def roi_card(val, label):
-        return (
-            f'<td style="text-align:center;padding:12px;border-right:1px solid #e2e8f0">'
-            f'<div style="font-size:20px;font-weight:800;color:#1e293b">{val}</div>'
-            f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;'
-            f'letter-spacing:0.5px;margin-top:2px">{label}</div></td>'
+    # ── 4. Monitor de ligas BTTS ──────────────────────────────────────────────
+    if lg_mon:
+        lm_rows = ""
+        for r in lg_mon:
+            lbl, col, bg = (
+                ("ALTO",  "#dc2626", "#fef2f2") if r["raw_rate"] < 50 else
+                (("MÉDIO", "#ca8a04", "#fffbeb") if r["raw_rate"] < 65 else
+                 ("BAIXO", "#16a34a", "#f0fdf4"))
+            )
+            excl = " 🚫" if r["league"] in EXCLUDED_LEAGUES else ""
+            pr   = (str(r["pick_rate"]) + "%") if r["pick_rate"] is not None else "–"
+            lm_rows += (
+                f'<tr style="border-bottom:1px solid #f8fafc">'
+                f'<td style="padding:6px 12px;font-size:11px;color:#1e293b">{r["league"]}{excl}</td>'
+                f'<td style="padding:6px 8px;text-align:center;font-size:10px;color:#94a3b8">{r["n"]}</td>'
+                f'<td style="padding:6px 12px">'
+                f'<div style="display:flex;align-items:center;gap:6px">'
+                f'{bar_html(r["raw_rate"], col)}'
+                f'<span style="font-size:11px;font-weight:700;color:{col}">{r["raw_rate"]:.0f}%</span>'
+                f'</div></td>'
+                f'<td style="padding:6px 8px;text-align:center;font-size:11px;font-weight:700;'
+                f'color:{rate_col(r["pick_rate"]) if r["pick_rate"] is not None else "#94a3b8"}">{pr}</td>'
+                f'<td style="padding:6px 10px;text-align:center">'
+                f'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;'
+                f'background:{bg};color:{col}">{lbl}</span></td>'
+                f'</tr>'
+            )
+        lg_mon_section = (
+            section_title("🗺️ Monitor de Ligas — BTTS Bruto")
+            + f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+            f'border-radius:10px;overflow:hidden">'
+            f'<thead><tr style="background:#f1f5f9">'
+            f'<th style="padding:7px 12px;text-align:left;font-size:10px;color:#64748b">Liga</th>'
+            f'<th style="padding:7px 8px;font-size:10px;color:#64748b">N</th>'
+            f'<th style="padding:7px 12px;font-size:10px;color:#64748b">BTTS Bruto</th>'
+            f'<th style="padding:7px 8px;font-size:10px;color:#64748b">Pick %</th>'
+            f'<th style="padding:7px 10px;font-size:10px;color:#64748b">Risco</th>'
+            f'</tr></thead><tbody>{lm_rows}</tbody></table>'
+            f'<div style="font-size:10px;color:#94a3b8;margin-top:6px;font-style:italic">'
+            f'Taxa bruta = todos os jogos da liga, independente de threshold · 🚫 = liga excluída das triplas</div>'
+        )
+    else:
+        lg_mon_section = ""
+
+    # ── 5. Notas de detecção ──────────────────────────────────────────────────
+    notes = []
+
+    # xG calibration
+    if xga:
+        s = xga["summary"]
+        if s["avg_err"] > 0.2:
+            notes.append(("🟡", "xG sistematicamente subestimado",
+                f'Modelo prevê {s["avg_xg"]} golos mas ocorrem {s["avg_goals"]} em média '
+                f'(erro +{s["avg_err"]}). Jogos Over 2.5 podem ser mais frequentes do que o modelo indica.'))
+        elif s["avg_err"] < -0.2:
+            notes.append(("🔴", "xG sistematicamente sobreavaliado",
+                f'Modelo prevê {s["avg_xg"]} golos mas ocorrem {s["avg_goals"]} em média '
+                f'(erro {s["avg_err"]}). Picks Over 2.5 podem ter taxa real inferior ao previsto.'))
+        else:
+            notes.append(("🟢", "xG bem calibrado globalmente",
+                f'Erro médio {s["avg_err"]:+.2f} — dentro de ±0.2 golos. Previsões são fiáveis.'))
+
+        # Ligas com calibração extrema
+        for lg in xga["league_stats"]:
+            if lg["diff"] < -0.8:
+                notes.append(("🔴", f'Sobreavaliação severa: {lg["league"]}',
+                    f'xG médio {lg["avg_xg"]:.2f} vs {lg["avg_goals"]:.2f} golos reais '
+                    f'(Δ={lg["diff"]:+.2f}). BTTS e Over 2.5 nesta liga são suspeitos.'))
+            elif lg["diff"] > 0.8:
+                notes.append(("🟢", f'Subestimação severa: {lg["league"]}',
+                    f'xG médio {lg["avg_xg"]:.2f} vs {lg["avg_goals"]:.2f} golos reais '
+                    f'(Δ={lg["diff"]:+.2f}). Over 2.5 pode ter maior hit rate real.'))
+
+    # BTTS confiança BAIXA
+    baixa_btts = s_btts.get("by_conf", {}).get("BAIXA")
+    if baixa_btts and baixa_btts["picks"] >= 3:
+        notes.append(("🟡", "BTTS confiança BAIXA validado",
+            f'{baixa_btts["hits"]}/{baixa_btts["picks"]} = {baixa_btts["rate"]}% — '
+            f'abaixo do threshold de 65%. Exclusão do sistema de triplas correcta.'))
+
+    # O25 confiança BAIXA
+    baixa_o25 = s_o25.get("by_conf", {}).get("BAIXA")
+    if baixa_o25 and baixa_o25["picks"] >= 2:
+        notes.append(("🟡", "O25 confiança BAIXA filtrado",
+            f'{baixa_o25["hits"]}/{baixa_o25["picks"]} = {baixa_o25["rate"]}% — '
+            f'inutilizável. Threshold ALTA+MÉDIA correcto.'))
+
+    # Ligas problemáticas no monitor
+    high_risk = [r for r in lg_mon if r["raw_rate"] < 50 and r["n"] >= 3]
+    for r in high_risk:
+        tag = "excluída 🚫" if r["league"] in EXCLUDED_LEAGUES else "ainda não excluída — monitorizar"
+        notes.append(("🔴", f'Risco ALTO: {r["league"]}',
+            f'BTTS bruto {r["raw_rate"]:.0f}% em {r["n"]} jogos ({tag}).'))
+
+    # Cobertura de triplas
+    total_days = processed_days
+    n_trebles  = len([t for t in trebles.get("history", []) if t.get("status") == "scored"])
+    if total_days > 0:
+        cov = n_trebles / total_days * 100
+        if cov < 80:
+            notes.append(("🟡", f'Cobertura de triplas: {cov:.0f}%',
+                f'{n_trebles} triplas em {total_days} dias processados. '
+                f'Alguns dias têm picks insuficientes — considerar reduzir threshold se não melhorar.'))
+        else:
+            notes.append(("🟢", f'Cobertura de triplas: {cov:.0f}%',
+                f'{n_trebles} triplas em {total_days} dias — cobertura adequada.'))
+
+    # Sample size warning
+    if total_records < 150:
+        notes.append(("🟡", f'Amostra ainda pequena: {total_records} registos',
+            f'Thresholds calibrados com {processed_days} dias de dados. '
+            f'Aguardar ~30 dias (≈400 registos) para ajustes estatisticamente robustos.'))
+
+    # 1X2 tiny sample
+    if s_1x2["picks"] < 15:
+        notes.append(("🟡", f'1X2-MÉDIA: amostra pequena ({s_1x2["picks"]} picks)',
+            f'{s_1x2["rate"]}% com apenas {s_1x2["picks"]} picks — resultado promissor '
+            f'mas não é estatisticamente conclusivo. Monitorizar.'))
+
+    notes_rows = ""
+    for icon, title, body in notes:
+        notes_rows += (
+            f'<tr style="border-bottom:1px solid #f8fafc">'
+            f'<td style="padding:10px 14px;vertical-align:top;font-size:18px;width:28px">{icon}</td>'
+            f'<td style="padding:10px 14px">'
+            f'  <div style="font-weight:700;color:#1e293b;font-size:12px;margin-bottom:3px">{title}</div>'
+            f'  <div style="font-size:11px;color:#475569;line-height:1.5">{body}</div>'
+            f'</td></tr>'
         )
 
-    treble_roi_section = (
-        f'<h2 style="margin:24px 0 12px;font-size:16px;color:#1e293b">💰 Triplas — ROI</h2>'
-        f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+    notes_section = (
+        section_title("🧠 Notas de Detecção — Ajustes Futuros")
+        + f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
         f'border-radius:10px;overflow:hidden">'
-        f'<tbody><tr>'
-        f'{roi_card(roi["total"], "Triplas")}'
-        f'{roi_card(roi["won"], "Ganhas")}'
-        f'{roi_card(str(roi["rate"]) + "%", "Hit Rate")}'
-        f'<td style="text-align:center;padding:12px">'
-        f'<div style="font-size:20px;font-weight:800;color:{roi_col}">{roi_str}</div>'
-        f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">ROI</div>'
-        f'</td></tr></tbody></table>'
+        f'<tbody>{notes_rows}</tbody></table>'
+        f'<div style="font-size:10px;color:#94a3b8;margin-top:6px;font-style:italic">'
+        f'🟢 Positivo · 🟡 Monitorizar · 🔴 Problema detectado</div>'
     )
 
-    # ── Histórico recente ─────────────────────────────────────────────────────
+    # ── 6. Triplas — ROI + histórico ─────────────────────────────────────────
+    roi_col = rate_col(roi["rate"]) if roi["total"] > 0 else "#94a3b8"
+    if roi["roi_pct"] is not None:
+        roi_str = ("+" if roi["roi_pct"] >= 0 else "") + str(roi["roi_pct"]) + "%"
+        roi_label = "ROI"
+    else:
+        roi_str, roi_label = "N/D", "ROI (sem odds)"
+
+    treble_roi_section = (
+        section_title("💰 Triplas — ROI Acumulado")
+        + f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+        f'border-radius:10px;overflow:hidden">'
+        f'<tbody><tr>'
+        + small_card(str(roi["total"]), "Triplas")
+        + small_card(str(roi["won"]), "Ganhas")
+        + small_card(str(roi["rate"]) + "%", "Hit Rate", roi_col)
+        + f'<td style="text-align:center;padding:12px 8px">'
+        f'<div style="font-size:18px;font-weight:800;color:{roi_col}">{roi_str}</div>'
+        f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;'
+        f'letter-spacing:0.4px;margin-top:3px">{roi_label}</div></td>'
+        + f'</tr></tbody></table>'
+    )
+
     scored = sorted(
         [t for t in trebles.get("history", []) if t.get("status") == "scored"],
         key=lambda x: x["date"], reverse=True,
     )[:5]
-
     hist_rows = ""
     for t in scored:
-        won   = t.get("hit", False)
-        icon  = "✅" if won else "❌"
-        pr    = t.get("profit_1u")
+        won = t.get("hit", False)
+        icon = "✅" if won else "❌"
+        pr = t.get("profit_1u")
         if won:
-            p_str = f'+{pr:.2f}u' if pr is not None else 'odds N/D'
+            p_str = ("+" + f"{pr:.2f}u") if pr is not None else "odds N/D"
             p_col = "#16a34a"
         else:
-            p_str, p_col = '-1.00u', '#dc2626'
+            p_str, p_col = "-1.00u", "#dc2626"
+        res_icons = "".join(("✓" if r else "✗") for r in t.get("pick_results", []))
         picks_str = " · ".join(
-            f'{mkt_label.get(pk["market"], pk["market"])} {pk["league"]}'
+            mkt_label.get(pk["market"], pk["market"]) + " " + pk["league"]
             for pk in t.get("picks", [])
         )
+        odds_str = f"{t['combined_odds']:.2f}" if t.get("combined_odds") else "–"
         hist_rows += (
             f'<tr style="border-bottom:1px solid #f1f5f9">'
-            f'<td style="padding:8px 12px;font-weight:600;color:#1e293b">{icon} {t["date"]}</td>'
-            f'<td style="padding:8px 12px;font-size:11px;color:#64748b">{picks_str}</td>'
-            f'<td style="padding:8px 12px;text-align:right;font-weight:700;color:{p_col}">{p_str}</td>'
+            f'<td style="padding:8px 12px;font-weight:700;color:#1e293b;white-space:nowrap">{icon} {t["date"]}</td>'
+            f'<td style="padding:8px 12px;font-size:10px;color:#64748b">{picks_str}</td>'
+            f'<td style="padding:8px 8px;text-align:center;font-size:11px;color:#94a3b8">'
+            f'<span style="font-family:monospace">{res_icons}</span> @{odds_str}</td>'
+            f'<td style="padding:8px 12px;text-align:right;font-weight:700;color:{p_col};white-space:nowrap">{p_str}</td>'
             f'</tr>'
         )
-
     hist_section = ""
     if hist_rows:
         hist_section = (
-            f'<h2 style="margin:24px 0 12px;font-size:16px;color:#1e293b">📅 Triplas Recentes</h2>'
+            f'<div style="margin-top:12px">'
             f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
             f'border-radius:10px;overflow:hidden">'
-            f'<tbody>{hist_rows}</tbody></table>'
+            f'<thead><tr style="background:#f1f5f9">'
+            f'<th style="padding:7px 12px;text-align:left;font-size:10px;color:#64748b">Data</th>'
+            f'<th style="padding:7px 12px;text-align:left;font-size:10px;color:#64748b">Picks</th>'
+            f'<th style="padding:7px 8px;font-size:10px;color:#64748b">Resultado</th>'
+            f'<th style="padding:7px 12px;text-align:right;font-size:10px;color:#64748b">Profit</th>'
+            f'</tr></thead><tbody>{hist_rows}</tbody></table>'
+            f'</div>'
         )
 
     # ── Montagem final ────────────────────────────────────────────────────────
-    total_records = len(records)
-    date_min = min((r["date"] for r in records), default="–")
-    date_max = max((r["date"] for r in records), default="–")
-
     return f"""<!DOCTYPE html>
 <html lang="pt"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matemática Da Bola — {today}</title></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:'Helvetica Neue',Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px 0">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Helvetica Neue',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 0">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0"
-  style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;
-  overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+<table width="640" cellpadding="0" cellspacing="0"
+  style="max-width:640px;width:100%;background:#ffffff;border-radius:16px;
+  overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,.10)">
 
-  <!-- Header -->
-  <tr><td style="background:linear-gradient(135deg,#1e3a5f,#1e40af);padding:28px 32px">
-    <div style="font-size:24px;font-weight:800;color:#ffffff">⚽ Matemática Da Bola</div>
-    <div style="font-size:13px;color:#93c5fd;margin-top:4px">
-      Relatório Diário · {today} · {total_records} jogos analisados ({date_min} → {date_max})
+  <tr><td style="background:linear-gradient(135deg,#0f172a,#1e40af);padding:28px 32px">
+    <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px">
+    ⚽ Matemática Da Bola</div>
+    <div style="font-size:13px;color:#93c5fd;margin-top:6px">
+      Relatório Diário · <strong style="color:#fff">{today}</strong> ·
+      {total_records} jogos · {processed_days} dias de histórico ({date_min} → {date_max})
     </div>
   </td></tr>
 
-  <!-- Body -->
   <tr><td style="padding:28px 32px">
     {treble_section}
     {stats_section}
+    {xg_section}
+    {lg_mon_section}
+    {notes_section}
     {treble_roi_section}
     {hist_section}
 
-    <!-- CTA -->
-    <div style="text-align:center;margin-top:28px">
+    <div style="text-align:center;margin-top:28px;padding-top:20px;border-top:1px solid #f1f5f9">
       <a href="https://nunovinhas-creator.github.io/football-dashboard/dashboard.html"
          style="display:inline-block;background:#1e40af;color:#ffffff;font-weight:700;
-         font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none">
-        Ver Dashboard Completo →
+         font-size:13px;padding:11px 24px;border-radius:8px;text-decoration:none;margin:4px">
+        📊 Dashboard Ao Vivo →
       </a>
-      &nbsp;
       <a href="https://nunovinhas-creator.github.io/football-dashboard/backtest.html"
          style="display:inline-block;background:#f1f5f9;color:#1e293b;font-weight:700;
-         font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none">
-        Backtest & ROI →
+         font-size:13px;padding:11px 24px;border-radius:8px;text-decoration:none;margin:4px">
+        🔬 Backtest & ROI →
       </a>
     </div>
   </td></tr>
 
-  <!-- Footer -->
-  <tr><td style="background:#f1f5f9;padding:16px 32px;text-align:center;
-    font-size:11px;color:#94a3b8">
-    Matemática Da Bola · Actualizado automaticamente 4× por dia via GitHub Actions
+  <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 32px;
+    text-align:center;font-size:10px;color:#94a3b8">
+    Matemática Da Bola · actualizado automaticamente 4× por dia ·
+    GitHub Actions · dados desde {date_min}
   </td></tr>
 </table>
 </td></tr></table>
