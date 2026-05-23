@@ -1232,8 +1232,8 @@ def main():
         f.write(html)
     print("[backtest] docs/backtest.html gerado ✓")
 
-    # Relatório diário por email — apenas às 07:00 UTC
-    if datetime.now(timezone.utc).hour == 7:
+    # Relatório diário às 07:00 UTC, ou forçado em workflow_dispatch
+    if datetime.now(timezone.utc).hour == 7 or os.environ.get("FORCE_EMAIL"):
         send_email_report(history, trebles)
 
 if __name__ == "__main__":

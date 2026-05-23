@@ -38,6 +38,7 @@ jobs:
           BSD_API_KEY:         ${{ secrets.BSD_API_KEY }}
           GMAIL_USER:          ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD:  ${{ secrets.GMAIL_APP_PASSWORD }}
+          FORCE_EMAIL:         ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: python backtest.py
 
       - name: Commit e push
