@@ -330,7 +330,12 @@ def score_treble(treble, records_for_date):
 
     won   = all(results)
     odds  = treble.get("combined_odds")
-    profit = round(odds - 1, 2) if (won and odds) else -1.0
+    if won and odds:
+        profit = round(odds - 1, 2)
+    elif won:
+        profit = None   # ganhou mas odds não foram guardadas na época
+    else:
+        profit = -1.0
 
     return {
         **treble,
@@ -665,19 +670,23 @@ def rc(rate):
 def treble_roi(trebles_history):
     hist = [t for t in trebles_history if t.get("status") == "scored"]
     if not hist:
-        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,"roi_pct":0}
-    total    = len(hist)
-    won      = sum(1 for t in hist if t.get("hit"))
-    staked   = float(total)
-    returned = sum(t.get("combined_odds", 0) for t in hist if t.get("hit") and t.get("combined_odds"))
-    roi_pct  = round((returned - staked) / staked * 100, 1) if staked else 0
+        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,"roi_pct":None,"has_odds":False}
+    total  = len(hist)
+    won    = sum(1 for t in hist if t.get("hit"))
+    # apenas inclui no ROI financeiro as triplas onde as odds foram guardadas
+    with_odds = [t for t in hist if t.get("combined_odds")]
+    has_odds  = bool(with_odds)
+    staked    = float(len(with_odds))
+    returned  = sum(t["combined_odds"] for t in with_odds if t.get("hit"))
+    roi_pct   = round((returned - staked) / staked * 100, 1) if staked else None
     return {
-        "total":   total,
-        "won":     won,
-        "rate":    round(won/total*100, 1) if total else 0,
-        "staked":  staked,
-        "returned":round(returned, 2),
-        "roi_pct": roi_pct,
+        "total":    total,
+        "won":      won,
+        "rate":     round(won/total*100, 1) if total else 0,
+        "staked":   staked,
+        "returned": round(returned, 2),
+        "roi_pct":  roi_pct,
+        "has_odds": has_odds,
     }
 
 def treble_section_html(trebles_data):
@@ -730,14 +739,19 @@ def treble_section_html(trebles_data):
         today_html = '<div class="tb-empty">Sem tripla para hoje (picks insuficientes com alta confiança).</div>'
 
     # ROI summary
-    roi_col = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
+    if roi["roi_pct"] is not None:
+        roi_col  = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
+        roi_str  = f'{"+" if roi["roi_pct"]>=0 else ""}{roi["roi_pct"]}%'
+    else:
+        roi_col  = "#94a3b8"
+        roi_str  = "N/D"
     roi_html = (
         f'<div class="tb-roi">'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["total"]}</div><div class="tb-roi-l">Triplas</div></div>'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["won"]}</div><div class="tb-roi-l">Ganhas</div></div>'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["rate"]}%</div><div class="tb-roi-l">Hit Rate</div></div>'
-        f'<div class="tb-roi-item"><div class="tb-roi-n" style="color:{roi_col}">'
-        f'{"+" if roi["roi_pct"]>=0 else ""}{roi["roi_pct"]}%</div><div class="tb-roi-l">ROI</div></div>'
+        f'<div class="tb-roi-item"><div class="tb-roi-n" style="color:{roi_col}">{roi_str}</div>'
+        f'<div class="tb-roi-l">ROI{" (sem odds)" if not roi["has_odds"] else ""}</div></div>'
         f'</div>'
     )
 
@@ -749,8 +763,11 @@ def treble_section_html(trebles_data):
             won_t   = t.get("hit", False)
             icon    = "✓" if won_t else "✗"
             icon_c  = "#4ade80" if won_t else "#f87171"
-            profit  = t.get("profit_1u", -1)
-            p_str   = f'+{profit:.2f}u' if won_t else '-1.00u'
+            profit  = t.get("profit_1u")
+            if won_t:
+                p_str = f'+{profit:.2f}u' if profit is not None else 'odds N/D'
+            else:
+                p_str = '-1.00u'
             p_col   = "#4ade80" if won_t else "#f87171"
             odds_d  = f"{t['combined_odds']:.2f}" if t.get("combined_odds") else "–"
             mkt_str = " · ".join(
