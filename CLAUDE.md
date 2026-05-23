@@ -162,6 +162,9 @@ Runs on schedule (4× daily) and on manual `workflow_dispatch`. Steps:
 - `BSD_API_KEY`
 - `TG_TOKEN`
 - `TG_CHAT_ID`
+- `GMAIL_USER` — endereço Gmail que envia o relatório diário
+- `GMAIL_APP_PASSWORD` — Google App Password (não a password normal)
+- `TG_CHAT_ID`
 
 ---
 

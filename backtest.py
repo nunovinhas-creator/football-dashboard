@@ -6,7 +6,10 @@ Modo SCORE (00:00 UTC + sempre): cruza predições com resultados; pontua tripla
 
 import os
 import json
+import smtplib
 import requests
+from email.mime.multipart import MIMEMultipart
+from email.mime.text      import MIMEText
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
@@ -15,6 +18,10 @@ BASE         = "https://sports.bzzoiro.com/api/v2"
 HEADERS      = {"Authorization": f"Token {BSD_KEY}"}
 HISTORY_FILE = "docs/history.json"
 TREBLES_FILE = "docs/trebles.json"
+
+GMAIL_USER   = os.environ.get("GMAIL_USER", "")
+GMAIL_PASS   = os.environ.get("GMAIL_APP_PASSWORD", "")
+EMAIL_TO     = "nunovinhas@gmail.com"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -1225,5 +1232,242 @@ def main():
         f.write(html)
     print("[backtest] docs/backtest.html gerado ✓")
 
+    # Relatório diário por email — apenas às 07:00 UTC
+    if datetime.now(timezone.utc).hour == 7:
+        send_email_report(history, trebles)
+
 if __name__ == "__main__":
     main()
+
+# ── Email ─────────────────────────────────────────────────────────────────────
+
+def _email_html(history, trebles):
+    records  = migrate_picks(history.get("records", []))
+    s_btts   = calc_stats(records, "pick_btts", "hit_btts", "BTTS")
+    s_1x2    = calc_stats(records, "pick_1x2",  "hit_1x2",  "1X2")
+    s_o25    = calc_stats(records, "pick_o25",  "hit_o25",  "Over 2.5")
+    roi      = treble_roi(trebles.get("history", []))
+    today    = today_str()
+
+    # ── Tripla de hoje ────────────────────────────────────────────────────────
+    today_treble = next(
+        (t for t in trebles.get("pending", []) if t.get("date") == today),
+        None,
+    )
+    mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
+    conf_col  = {"ALTA": "#16a34a", "MÉDIA": "#ca8a04", "BAIXA": "#dc2626"}
+
+    if today_treble:
+        picks_rows = ""
+        for i, pk in enumerate(today_treble["picks"], 1):
+            col  = conf_col.get(pk.get("conf", ""), "#64748b")
+            mkt  = mkt_label.get(pk["market"], pk["market"])
+            odds = f"@{pk['odds']:.2f}" if pk.get("odds") else "–"
+            picks_rows += (
+                f'<tr>'
+                f'<td style="width:24px;text-align:center;background:#1e3a5f;color:#60a5fa;'
+                f'font-weight:800;font-size:12px;border-radius:50%;padding:4px">{i}</td>'
+                f'<td style="padding:8px 12px">'
+                f'  <div style="font-size:11px;color:#64748b;margin-bottom:2px">{pk["league"]}</div>'
+                f'  <div style="font-weight:700;color:#1e293b">{pk["home"]} vs {pk["away"]}</div>'
+                f'</td>'
+                f'<td style="padding:8px;white-space:nowrap;text-align:right">'
+                f'  <span style="font-size:11px;color:#475569">{mkt}</span><br>'
+                f'  <span style="font-weight:800;color:{col}">{int(pk["prob"]*100)}%</span>'
+                f'  <span style="font-size:11px;color:#94a3b8;margin-left:4px">{odds}</span>'
+                f'</td>'
+                f'</tr>'
+            )
+        combined = f"{today_treble['combined_odds']:.2f}" if today_treble.get("combined_odds") else "–"
+        treble_section = (
+            f'<h2 style="margin:0 0 12px;font-size:16px;color:#1e293b">🎯 Tripla de Hoje</h2>'
+            f'<table style="width:100%;border-collapse:collapse;background:#f8fafc;'
+            f'border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">'
+            f'<tbody>{picks_rows}</tbody>'
+            f'<tfoot><tr><td colspan="3" style="padding:8px 12px;font-size:12px;'
+            f'color:#475569;border-top:1px solid #e2e8f0">'
+            f'💰 Odds combinadas: <strong>{combined}</strong> — aposta 1u, retorno {combined}u se ganhar'
+            f'</td></tr></tfoot></table>'
+        )
+    else:
+        treble_section = (
+            '<h2 style="margin:0 0 12px;font-size:16px;color:#1e293b">🎯 Tripla de Hoje</h2>'
+            '<p style="color:#64748b;font-style:italic">Sem picks suficientes hoje.</p>'
+        )
+
+    # ── Stats por mercado ─────────────────────────────────────────────────────
+    def stat_row(s, emoji):
+        rate = s["rate"]
+        col  = "#16a34a" if rate >= 65 else ("#ca8a04" if rate >= 55 else "#dc2626")
+        bar  = int(rate)
+        return (
+            f'<tr style="border-bottom:1px solid #f1f5f9">'
+            f'<td style="padding:10px 12px;font-weight:600;color:#1e293b">{emoji} {s["label"]}</td>'
+            f'<td style="padding:10px 12px;text-align:center;color:#475569">'
+            f'{s["hits"]}/{s["picks"]}</td>'
+            f'<td style="padding:10px 12px;min-width:140px">'
+            f'<div style="display:flex;align-items:center;gap:8px">'
+            f'<div style="flex:1;height:6px;background:#e2e8f0;border-radius:3px">'
+            f'<div style="width:{bar}%;height:100%;background:{col};border-radius:3px"></div></div>'
+            f'<span style="font-weight:800;color:{col};min-width:38px">{rate}%</span>'
+            f'</div></td>'
+            f'</tr>'
+        )
+
+    stats_section = (
+        f'<h2 style="margin:24px 0 12px;font-size:16px;color:#1e293b">📊 Performance do Modelo</h2>'
+        f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+        f'border-radius:10px;overflow:hidden">'
+        f'<thead><tr style="background:#f1f5f9">'
+        f'<th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase">Mercado</th>'
+        f'<th style="padding:8px 12px;text-align:center;font-size:11px;color:#64748b;text-transform:uppercase">Picks</th>'
+        f'<th style="padding:8px 12px;font-size:11px;color:#64748b;text-transform:uppercase">Taxa de Acerto</th>'
+        f'</tr></thead>'
+        f'<tbody>'
+        f'{stat_row(s_btts,"🔁")}'
+        f'{stat_row(s_1x2, "⚽")}'
+        f'{stat_row(s_o25, "📈")}'
+        f'</tbody></table>'
+    )
+
+    # ── ROI das triplas ───────────────────────────────────────────────────────
+    roi_col = "#16a34a" if (roi["roi_pct"] or 0) >= 0 else "#dc2626"
+    if roi["roi_pct"] is not None:
+        roi_str = f'{"+" if roi["roi_pct"] >= 0 else ""}{roi["roi_pct"]}%'
+    else:
+        roi_str = "N/D (odds não disponíveis nos dados históricos)"
+
+    def roi_card(val, label):
+        return (
+            f'<td style="text-align:center;padding:12px;border-right:1px solid #e2e8f0">'
+            f'<div style="font-size:20px;font-weight:800;color:#1e293b">{val}</div>'
+            f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;'
+            f'letter-spacing:0.5px;margin-top:2px">{label}</div></td>'
+        )
+
+    treble_roi_section = (
+        f'<h2 style="margin:24px 0 12px;font-size:16px;color:#1e293b">💰 Triplas — ROI</h2>'
+        f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+        f'border-radius:10px;overflow:hidden">'
+        f'<tbody><tr>'
+        f'{roi_card(roi["total"], "Triplas")}'
+        f'{roi_card(roi["won"], "Ganhas")}'
+        f'{roi_card(str(roi["rate"]) + "%", "Hit Rate")}'
+        f'<td style="text-align:center;padding:12px">'
+        f'<div style="font-size:20px;font-weight:800;color:{roi_col}">{roi_str}</div>'
+        f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">ROI</div>'
+        f'</td></tr></tbody></table>'
+    )
+
+    # ── Histórico recente ─────────────────────────────────────────────────────
+    scored = sorted(
+        [t for t in trebles.get("history", []) if t.get("status") == "scored"],
+        key=lambda x: x["date"], reverse=True,
+    )[:5]
+
+    hist_rows = ""
+    for t in scored:
+        won   = t.get("hit", False)
+        icon  = "✅" if won else "❌"
+        pr    = t.get("profit_1u")
+        if won:
+            p_str = f'+{pr:.2f}u' if pr is not None else 'odds N/D'
+            p_col = "#16a34a"
+        else:
+            p_str, p_col = '-1.00u', '#dc2626'
+        picks_str = " · ".join(
+            f'{mkt_label.get(pk["market"], pk["market"])} {pk["league"]}'
+            for pk in t.get("picks", [])
+        )
+        hist_rows += (
+            f'<tr style="border-bottom:1px solid #f1f5f9">'
+            f'<td style="padding:8px 12px;font-weight:600;color:#1e293b">{icon} {t["date"]}</td>'
+            f'<td style="padding:8px 12px;font-size:11px;color:#64748b">{picks_str}</td>'
+            f'<td style="padding:8px 12px;text-align:right;font-weight:700;color:{p_col}">{p_str}</td>'
+            f'</tr>'
+        )
+
+    hist_section = ""
+    if hist_rows:
+        hist_section = (
+            f'<h2 style="margin:24px 0 12px;font-size:16px;color:#1e293b">📅 Triplas Recentes</h2>'
+            f'<table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;'
+            f'border-radius:10px;overflow:hidden">'
+            f'<tbody>{hist_rows}</tbody></table>'
+        )
+
+    # ── Montagem final ────────────────────────────────────────────────────────
+    total_records = len(records)
+    date_min = min((r["date"] for r in records), default="–")
+    date_max = max((r["date"] for r in records), default="–")
+
+    return f"""<!DOCTYPE html>
+<html lang="pt"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Matemática Da Bola — {today}</title></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:'Helvetica Neue',Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0"
+  style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;
+  overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+
+  <!-- Header -->
+  <tr><td style="background:linear-gradient(135deg,#1e3a5f,#1e40af);padding:28px 32px">
+    <div style="font-size:24px;font-weight:800;color:#ffffff">⚽ Matemática Da Bola</div>
+    <div style="font-size:13px;color:#93c5fd;margin-top:4px">
+      Relatório Diário · {today} · {total_records} jogos analisados ({date_min} → {date_max})
+    </div>
+  </td></tr>
+
+  <!-- Body -->
+  <tr><td style="padding:28px 32px">
+    {treble_section}
+    {stats_section}
+    {treble_roi_section}
+    {hist_section}
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-top:28px">
+      <a href="https://nunovinhas-creator.github.io/football-dashboard/dashboard.html"
+         style="display:inline-block;background:#1e40af;color:#ffffff;font-weight:700;
+         font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none">
+        Ver Dashboard Completo →
+      </a>
+      &nbsp;
+      <a href="https://nunovinhas-creator.github.io/football-dashboard/backtest.html"
+         style="display:inline-block;background:#f1f5f9;color:#1e293b;font-weight:700;
+         font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none">
+        Backtest & ROI →
+      </a>
+    </div>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="background:#f1f5f9;padding:16px 32px;text-align:center;
+    font-size:11px;color:#94a3b8">
+    Matemática Da Bola · Actualizado automaticamente 4× por dia via GitHub Actions
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>"""
+
+
+def send_email_report(history, trebles):
+    if not GMAIL_USER or not GMAIL_PASS:
+        print("[email] GMAIL_USER ou GMAIL_APP_PASSWORD não configurado — a saltar")
+        return
+    today = today_str()
+    try:
+        html = _email_html(history, trebles)
+        msg  = MIMEMultipart("alternative")
+        msg["Subject"] = f"⚽ Matemática Da Bola — {today}"
+        msg["From"]    = f"Matemática Da Bola <{GMAIL_USER}>"
+        msg["To"]      = EMAIL_TO
+        msg.attach(MIMEText(html, "html", "utf-8"))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:
+            server.login(GMAIL_USER, GMAIL_PASS)
+            server.sendmail(GMAIL_USER, EMAIL_TO, msg.as_string())
+        print(f"[email] Relatório {today} enviado para {EMAIL_TO} ✓")
+    except Exception as e:
+        print(f"[WARN] email falhou: {e}")
