@@ -186,7 +186,7 @@ def make_record(pred, result):
         "conf": conf,
         "pred": pred_r, "real": real,
         "pick_1x2":  best >= 61 and conf == "MÉDIA",
-        "pick_o25":  xgt >= 2.9,
+        "pick_o25":  xgt >= 2.9 and conf in ("ALTA", "MÉDIA"),
         "pick_btts": pb >= 61 and conf in ("ALTA", "MÉDIA"),
         "pick_xg":   xgt >= 2.8,
         "hit_1x2":   pred_r == real,
@@ -208,7 +208,7 @@ def migrate_picks(records):
         pb   = r.get("pb", 0)
         xgt  = r.get("xg", 0)
         r["pick_1x2"]  = best >= 61 and conf == "MÉDIA"
-        r["pick_o25"]  = xgt >= 2.9
+        r["pick_o25"]  = xgt >= 2.9 and conf in ("ALTA", "MÉDIA")
         r["pick_btts"] = pb >= 61 and conf in ("ALTA", "MÉDIA")
         r["pick_xg"]   = xgt >= 2.8
     return records

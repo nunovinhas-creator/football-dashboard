@@ -196,7 +196,7 @@ These thresholds were determined by analysing 5 days of historical data (68 reco
 |--------|-----------|----------|-----------|
 | `pick_1x2` | `best ≥ 61% AND conf == "MÉDIA"` | 100% (5/5) | ALTA was 33% — worse than random |
 | `pick_btts` | `pb ≥ 61% AND conf IN ("ALTA","MÉDIA")` | 92% (11/12) | BAIXA was 45% — unusable |
-| `pick_o25` | `xg_total ≥ 2.9` | (recalibrating) | Model's `po` field was 47% at any threshold |
+| `pick_o25` | `xg_total ≥ 2.9 AND conf IN ("ALTA","MÉDIA")` | 64% (9/14) | BAIXA was 31% (4/13) — unusable; filtering by conf improves to 64% |
 | `pick_xg` | `xg_total ≥ 2.8` | (informational) | Was "always true" before — 68/68 records |
 
 The `migrate_picks()` function in backtest.py recomputes these for all historical records on every run. Do not remove it — it ensures consistency when thresholds are tuned.
