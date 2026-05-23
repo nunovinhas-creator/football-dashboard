@@ -210,6 +210,40 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
   .stats-strip .stat-n{font-size:1.4rem}
   .filters{gap:5px}
 }
+
+/* TREBLE BANNER */
+.treble-banner{
+  background:linear-gradient(135deg,#0b1f3a 0%,#0d1e35 100%);
+  border:1px solid #1e4d8c;border-radius:12px;
+  padding:14px 20px;margin:14px 28px 0;
+  max-width:1000px;margin-left:auto;margin-right:auto;
+  box-shadow:0 0 24px #1e4d8c30
+}
+.treble-banner-hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:.84rem;font-weight:700;color:#60a5fa;margin-bottom:10px
+}
+.treble-banner-odds{font-size:.75rem;color:var(--sub);font-weight:400}
+.treble-banner-odds b{color:#f1f5f9}
+.treble-link{color:#60a5fa;text-decoration:none;font-weight:600}
+.treble-link:hover{text-decoration:underline}
+.tb-pick{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 0;border-bottom:1px solid #182540;font-size:.78rem;flex-wrap:wrap
+}
+.tb-pick:last-child{border-bottom:none}
+.tb-pick-num{
+  width:22px;height:22px;border-radius:50%;
+  background:#1e3a5f;color:#60a5fa;
+  font-size:.68rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0
+}
+.tb-pick-league{color:var(--muted);min-width:110px;font-size:.68rem}
+.tb-pick-teams{flex:1;font-weight:600;color:var(--text);min-width:130px}
+.tb-pick-mkt{color:var(--sub)}
+.tb-pick-odds{color:var(--muted);margin-left:auto}
+.tb-pick-conf{font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:12px;margin-left:4px}
+
 </style>
 </head>
 <body>
@@ -229,6 +263,40 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
   <div class="stat-item"><div class="stat-n" style="color:var(--yellow)">85</div><div class="stat-l">Média confiança</div></div>
   <div class="stat-item"><div class="stat-n" style="color:var(--green-dim)">0</div><div class="stat-l">Com resultado</div></div>
 </div>
+<div class="treble-banner">
+  <div class="treble-banner-hdr">
+    <span>🎯 Tripla do Dia — 23 Mai 2026</span>
+    <span class="treble-banner-odds">Odds combinadas: <b>6.14</b> &nbsp;·&nbsp; <a href="backtest.html" class="treble-link">Histórico &amp; ROI →</a></span>
+  </div>
+  <div class="tb-pick">
+    <span class="tb-pick-num">1</span>
+    <span class="tb-pick-league">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</span>
+    <span class="tb-pick-teams">Arsenal <span style="color:var(--muted)">vs</span> Everton</span>
+    <span class="tb-pick-mkt">🔁 BTTS</span>
+    <span style="color:#fbbf24;font-weight:700">72%</span>
+    <span class="tb-pick-conf" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+    <span class="tb-pick-odds">@1.82</span>
+  </div>
+  <div class="tb-pick">
+    <span class="tb-pick-num">2</span>
+    <span class="tb-pick-league">🇩🇪 Bundesliga</span>
+    <span class="tb-pick-teams">Bayern Munich <span style="color:var(--muted)">vs</span> VfB Stuttgart</span>
+    <span class="tb-pick-mkt">🔁 BTTS</span>
+    <span style="color:#fbbf24;font-weight:700">68%</span>
+    <span class="tb-pick-conf" style="background:#2a1f00;color:#fbbf24;border:1px solid #78350f">MÉDIA</span>
+    <span class="tb-pick-odds">@1.90</span>
+  </div>
+  <div class="tb-pick">
+    <span class="tb-pick-num">3</span>
+    <span class="tb-pick-league">🇳🇱 Eredivisie</span>
+    <span class="tb-pick-teams">PSV <span style="color:var(--muted)">vs</span> Ajax</span>
+    <span class="tb-pick-mkt">🔁 BTTS</span>
+    <span style="color:#4ade80;font-weight:700">65%</span>
+    <span class="tb-pick-conf" style="background:#0d2818;color:#4ade80;border:1px solid #166534">ALTA</span>
+    <span class="tb-pick-odds">@1.78</span>
+  </div>
+</div>
+
 <div class="filters">
   <div class="f-group">
     <span class="f-label">Liga</span>

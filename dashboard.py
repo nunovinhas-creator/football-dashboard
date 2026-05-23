@@ -3,12 +3,15 @@ Matemática Da Bola — BSD API v2 (fixed)
 """
 
 import os
+import json
 import requests
 from datetime import datetime, timezone, timedelta
 
 BSD_KEY  = os.environ["BSD_API_KEY"]
 TG_TOKEN = os.environ["TG_TOKEN"]
 TG_CHAT  = os.environ["TG_CHAT_ID"]
+
+TREBLES_FILE = "docs/trebles.json"
 
 BASE    = "https://sports.bzzoiro.com/api/v2"
 HEADERS = {"Authorization": f"Token {BSD_KEY}"}
@@ -264,11 +267,57 @@ def match_card_html(enriched):
       </div>
     </div>'''
 
+def load_todays_treble():
+    try:
+        if os.path.exists(TREBLES_FILE):
+            with open(TREBLES_FILE, encoding="utf-8") as f:
+                data = json.load(f)
+            today = today_str()
+            for t in data.get("pending", []):
+                if t.get("date") == today:
+                    return t
+    except Exception:
+        pass
+    return None
+
+def treble_banner_html(treble):
+    if not treble:
+        return ""
+    mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
+    conf_col  = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24", "BAIXA": "#f87171"}
+    picks_html = ""
+    for pk in treble["picks"]:
+        col  = conf_col.get(pk.get("conf",""), "#94a3b8")
+        mkt  = mkt_label.get(pk["market"], pk["market"])
+        odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
+        picks_html += (
+            f'<div class="tb-pick">'
+            f'<span class="tb-pick-league">{pk["league"]}</span>'
+            f'<span class="tb-pick-teams">{pk["home"]} vs {pk["away"]}</span>'
+            f'<span class="tb-pick-mkt">{mkt}</span>'
+            f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+            f'<span class="tb-pick-odds">{odds}</span>'
+            f'</div>'
+        )
+    combined = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "–"
+    return (
+        f'<div class="treble-banner">'
+        f'<div class="treble-banner-hdr">'
+        f'<span>🎯 Tripla do Dia</span>'
+        f'<span class="treble-banner-odds">Odds combinadas: <b>{combined}</b>'
+        f' · <a href="backtest.html" class="treble-link">Ver histórico →</a></span>'
+        f'</div>'
+        f'{picks_html}'
+        f'</div>'
+    )
+
 def build_html(enriched_list):
     today = today_str()
     now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     with_data = [e for e in enriched_list if has_pred_data(e["pred"])]
+    todays_treble = load_todays_treble()
+    banner_html   = treble_banner_html(todays_treble)
 
     leagues  = sorted(set(e["match"].get("_league_name","") for e in with_data))
     dates    = sorted(set(
@@ -479,6 +528,31 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
 .extra-pill.hot-blue{{border-color:var(--blue-dim);background:#0d1d3a;color:var(--blue)}}
 .extra-pill.hot-blue span{{color:var(--blue)}}
 
+/* TREBLE BANNER */
+.treble-banner{{
+  background:linear-gradient(135deg,#0b1f3a 0%,#0d1e35 100%);
+  border:1px solid #1e4d8c;border-radius:12px;
+  padding:14px 20px;margin:14px 28px 0;max-width:1000px;margin-left:auto;margin-right:auto;
+  box-shadow:0 0 20px #1e4d8c22
+}}
+.treble-banner-hdr{{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:.82rem;font-weight:700;color:#60a5fa;margin-bottom:10px
+}}
+.treble-banner-odds{{font-size:.75rem;color:var(--sub);font-weight:400}}
+.treble-banner-odds b{{color:var(--text)}}
+.treble-link{{color:#60a5fa;text-decoration:none;font-weight:600}}
+.treble-link:hover{{text-decoration:underline}}
+.tb-pick{{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 0;border-bottom:1px solid #1a2540;font-size:.78rem;flex-wrap:wrap
+}}
+.tb-pick:last-child{{border-bottom:none}}
+.tb-pick-league{{color:var(--muted);min-width:120px;font-size:.68rem}}
+.tb-pick-teams{{flex:1;font-weight:600;color:var(--text);min-width:140px}}
+.tb-pick-mkt{{color:var(--sub)}}
+.tb-pick-odds{{color:var(--muted)}}
+
 /* FOOTER */
 .tabs{{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}}
 .tab{{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}}
@@ -515,6 +589,7 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
   <div class="stat-item"><div class="stat-n" style="color:var(--yellow)">{sum(1 for e in with_data if confidence_badge(e.get("confidence"))[0]=="MÉDIA")}</div><div class="stat-l">Média confiança</div></div>
   <div class="stat-item"><div class="stat-n" style="color:var(--green-dim)">{sum(1 for e in with_data if e.get("result"))}</div><div class="stat-l">Com resultado</div></div>
 </div>
+{banner_html}
 <div class="filters">
   <div class="f-group">
     <span class="f-label">Liga</span>
@@ -646,6 +721,20 @@ def send_telegram(enriched_list):
     lines = [f"⚽ *Matemática Da Bola — {today}*"]
     lines.append(f"📋 {len(enriched_list)} jogos · ✅ {len(with_value)} com value\n")
 
+    # Tripla do dia
+    treble = load_todays_treble()
+    if treble:
+        mkt_map = {"BTTS": "BTTS", "1X2-H": "Casa", "1X2-D": "Empate", "1X2-A": "Fora"}
+        lines.append("🎯 *TRIPLA DO DIA*")
+        for pk in treble["picks"]:
+            mkt  = mkt_map.get(pk["market"], pk["market"])
+            odds = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
+            lines.append(f"  • {pk['league']}: {pk['home']} vs {pk['away']} — {mkt} {int(pk['prob']*100)}%{odds}")
+        if treble.get("combined_odds"):
+            lines.append(f"  💰 Odds combinadas: *{treble['combined_odds']:.2f}*")
+        lines.append("")
+
+    # Value picks
     for e, vals in with_value:
         m = e["match"]
         lines.append(f"{m.get('_league_name','')}")

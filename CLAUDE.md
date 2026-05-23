@@ -15,16 +15,17 @@
 ```
 football-dashboard/
 ├── dashboard.py              # Main script: fetch predictions, detect value, generate HTML, send Telegram
-├── backtest.py               # Backtesting: snapshot daily predictions, score vs actual results
+├── backtest.py               # Backtesting: snapshot predictions, score results, build/score trebles
 ├── README.md                 # Portuguese documentation for end users
 ├── .github/
 │   └── workflows/
 │       └── dashboard.yml     # Scheduled CI/CD (4× daily)
 └── docs/                     # All generated output — committed to git and served via GitHub Pages
-    ├── dashboard.html        # Live dashboard (main page)
-    ├── backtest.html         # Backtest stats page
+    ├── dashboard.html        # Live dashboard (main page, includes today's treble banner)
+    ├── backtest.html         # Backtest stats + treble history + ROI
     ├── history.json          # Cumulative backtest records (persistent state)
-    ├── preds_YYYY-MM-DD.json # Daily prediction snapshots
+    ├── trebles.json          # Treble tracking: pending + history + ROI
+    ├── preds_YYYY-MM-DD.json # Daily prediction snapshots (includes _pinnacle_odds)
     └── .gitkeep
 ```
 
@@ -52,7 +53,7 @@ Runs at 07:00, 14:00, and 21:00 UTC. Produces `docs/dashboard.html` and sends Te
 
 ### backtest.py
 
-Runs at all four schedule times. Has two modes determined by the current UTC hour:
+Runs at all four schedule times. Has two modes plus treble construction:
 
 | Mode | When | Action |
 |------|------|--------|
@@ -60,6 +61,8 @@ Runs at all four schedule times. Has two modes determined by the current UTC hou
 | SCORE | 00:00 UTC (+ always runs) | Fetch results for all pending dates, score predictions, update `history.json`, rebuild `backtest.html` |
 
 **Partial processing:** If < 70% of results are available for a date, it is stored in `dates_partial` and retried the next day.
+
+**Treble construction:** At SAVE time, builds a daily treble from that day's predictions and saves it to `docs/trebles.json`. At SCORE time, resolves pending trebles once the date is fully processed.
 
 **Required environment variables:**
 - `BSD_API_KEY`
@@ -184,6 +187,39 @@ Runs on schedule (4× daily) and on manual `workflow_dispatch`. Steps:
 ### State Management
 - No database — file I/O only (`docs/history.json`)
 - `json.dump(..., ensure_ascii=False, separators=(",", ":"))` for compact UTF-8 JSON
+
+### Pick Thresholds (v3 — data-driven, do not revert)
+
+These thresholds were determined by analysing 5 days of historical data (68 records):
+
+| Market | Threshold | Hit Rate | Rationale |
+|--------|-----------|----------|-----------|
+| `pick_1x2` | `best ≥ 61% AND conf == "MÉDIA"` | 100% (5/5) | ALTA was 33% — worse than random |
+| `pick_btts` | `pb ≥ 61% AND conf IN ("ALTA","MÉDIA")` | 92% (11/12) | BAIXA was 45% — unusable |
+| `pick_o25` | `xg_total ≥ 2.9` | (recalibrating) | Model's `po` field was 47% at any threshold |
+| `pick_xg` | `xg_total ≥ 2.8` | (informational) | Was "always true" before — 68/68 records |
+
+The `migrate_picks()` function in backtest.py recomputes these for all historical records on every run. Do not remove it — it ensures consistency when thresholds are tuned.
+
+### Treble System
+
+**Selection logic** (`build_daily_treble()`):
+1. **Priority 1**: BTTS with ALTA or MÉDIA confidence (92% historical hit rate)
+2. **Priority 2**: 1X2 with MÉDIA confidence only (fill when BTTS insufficient)
+3. **Max 1 pick per league** — prevents correlated outcomes
+4. **Requires ≥ 3 qualifying picks** — no treble generated if insufficient
+
+**Persistence** — `docs/trebles.json`:
+```json
+{
+  "pending": [{"date": "2026-05-23", "picks": [...], "combined_odds": 6.33, "status": "pending"}],
+  "history": [{"date": "2026-05-20", "picks": [...], "combined_odds": 5.4, "hit": true, "profit_1u": 4.4}]
+}
+```
+
+**Scoring** (`score_treble()`): runs in SCORE mode when all 3 picks have real results. Treble is won only if ALL picks hit.
+
+**ROI tracking**: `treble_roi()` computes total staked (1 unit/treble), total returned (combined_odds × wins), and ROI % over all scored trebles.
 
 ### Known Bugs Fixed (do not reintroduce)
 - `parse_dt()` handles ISO 8601 dates with a `Z` suffix (`s.replace("Z", "+00:00")`)
