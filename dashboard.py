@@ -286,16 +286,20 @@ def treble_banner_html(treble):
     mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     conf_col  = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24", "BAIXA": "#f87171"}
     picks_html = ""
-    for pk in treble["picks"]:
+    for i, pk in enumerate(treble["picks"], 1):
         col  = conf_col.get(pk.get("conf",""), "#94a3b8")
         mkt  = mkt_label.get(pk["market"], pk["market"])
         odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
+        conf_bg = {"ALTA": "#0d2818", "MÉDIA": "#2a1f00", "BAIXA": "#2a0a0a"}.get(pk.get("conf",""), "#1a1a2e")
+        conf_bd = {"ALTA": "#166534", "MÉDIA": "#78350f", "BAIXA": "#7f1d1d"}.get(pk.get("conf",""), "#374151")
         picks_html += (
             f'<div class="tb-pick">'
+            f'<span class="tb-pick-num">{i}</span>'
             f'<span class="tb-pick-league">{pk["league"]}</span>'
-            f'<span class="tb-pick-teams">{pk["home"]} vs {pk["away"]}</span>'
+            f'<span class="tb-pick-teams">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</span>'
             f'<span class="tb-pick-mkt">{mkt}</span>'
             f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+            f'<span class="tb-pick-conf" style="background:{conf_bg};color:{col};border:1px solid {conf_bd}">{pk.get("conf","")}</span>'
             f'<span class="tb-pick-odds">{odds}</span>'
             f'</div>'
         )
@@ -303,9 +307,8 @@ def treble_banner_html(treble):
     return (
         f'<div class="treble-banner">'
         f'<div class="treble-banner-hdr">'
-        f'<span>🎯 Tripla do Dia</span>'
-        f'<span class="treble-banner-odds">Odds combinadas: <b>{combined}</b>'
-        f' · <a href="backtest.html" class="treble-link">Ver histórico →</a></span>'
+        f'<span>🎯 Tripla do Dia — {treble["date"]}</span>'
+        f'<span class="treble-banner-odds"><a href="backtest.html" class="treble-link">Histórico &amp; ROI →</a></span>'
         f'</div>'
         f'{picks_html}'
         f'</div>'
