@@ -1,12 +1,7 @@
 """
-Matemática Da Bola — Backtest v2 (fixed)
-Modo SAVE  (07:00/14:00/21:00 UTC): guarda predições do dia em docs/preds_YYYY-MM-DD.json
-Modo SCORE (00:00 UTC + sempre): cruza predições de dias anteriores com resultados reais
-
-FIXES:
-- BUG 2: SCORE agora tenta processar TODOS os dias não processados, não só ontem
-- BUG 4: parse seguro de datas ISO (Z suffix)
-- Robusto a falhas parciais: dias com poucos resultados são reprocessados no dia seguinte
+Matemática Da Bola — Backtest v3 (triplas)
+Modo SAVE  (07:00/14:00/21:00 UTC): guarda predições + odds Pinnacle; constrói tripla do dia
+Modo SCORE (00:00 UTC + sempre): cruza predições com resultados; pontua triplas; gera HTML
 """
 
 import os
@@ -19,6 +14,9 @@ BSD_KEY      = os.environ["BSD_API_KEY"]
 BASE         = "https://sports.bzzoiro.com/api/v2"
 HEADERS      = {"Authorization": f"Token {BSD_KEY}"}
 HISTORY_FILE = "docs/history.json"
+TREBLES_FILE = "docs/trebles.json"
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def get(path, params=None):
     r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
@@ -31,7 +29,6 @@ def today_str():
 def yesterday_str():
     return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
 
-# FIX BUG 4: parse seguro de datas
 def parse_dt(s):
     if not s:
         return None
@@ -42,6 +39,8 @@ def parse_dt(s):
 
 def preds_file(date_str):
     return f"docs/preds_{date_str}.json"
+
+# ── Persistência ──────────────────────────────────────────────────────────────
 
 def load_history():
     if os.path.exists(HISTORY_FILE):
@@ -57,6 +56,34 @@ def save_history(h):
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(h, f, ensure_ascii=False, separators=(",", ":"))
 
+def load_trebles():
+    if os.path.exists(TREBLES_FILE):
+        try:
+            with open(TREBLES_FILE, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"pending": [], "history": []}
+
+def save_trebles(t):
+    os.makedirs("docs", exist_ok=True)
+    with open(TREBLES_FILE, "w", encoding="utf-8") as f:
+        json.dump(t, f, ensure_ascii=False, separators=(",", ":"))
+
+# ── API ───────────────────────────────────────────────────────────────────────
+
+def fetch_pinnacle_odds(event_id):
+    try:
+        data = get(f"/events/{event_id}/odds/comparison/")
+        for b in (data.get("bookmakers") or []):
+            name = (b.get("bookmaker_name") or "").lower()
+            slug = b.get("bookmaker_slug", "")
+            if "pinnacle" in name or slug == "pinnacle":
+                return b
+    except Exception:
+        pass
+    return {}
+
 def fetch_todays_predictions():
     today = today_str()
     all_preds = []
@@ -70,6 +97,9 @@ def fetch_todays_predictions():
             for r in results:
                 ed = r.get("event", {}).get("event_date", "")[:10]
                 if ed == today:
+                    eid = r.get("event", {}).get("id")
+                    if eid:
+                        r["_pinnacle_odds"] = fetch_pinnacle_odds(eid)
                     all_preds.append(r)
             if not data.get("next"):
                 break
@@ -96,6 +126,13 @@ def fetch_event_result(event_id):
     except Exception:
         return None
 
+# ── Thresholds actualizados por mercado ───────────────────────────────────────
+#
+# pick_1x2:  só confiança MÉDIA (ALTA estava a 33%, BAIXA < 50%)
+# pick_o25:  xG total >= 2.9 (o po do modelo estava descalibrado a 47% em qualquer threshold)
+# pick_btts: pb >= 61% E confiança ALTA ou MÉDIA (BAIXA estava a 45%)
+# pick_xg:   xG total >= 2.8 (antes era "sempre true" — 100% das linhas)
+
 def make_record(pred, result):
     event   = pred.get("event", {})
     markets = pred.get("markets", {})
@@ -104,6 +141,7 @@ def make_record(pred, result):
     bt      = markets.get("btts", {})
     xg      = markets.get("expected_goals", {})
     model   = pred.get("model", {})
+    pin     = pred.get("_pinnacle_odds", {})
 
     hs    = int(result["home_score"])
     as_   = int(result["away_score"])
@@ -132,13 +170,13 @@ def make_record(pred, result):
     elif conf_val >= 0.45: conf = "MÉDIA"
     else:                  conf = "BAIXA"
 
-    # FIX: usar parse_dt para datas
     event_date = event.get("event_date", "")
     dt = parse_dt(event_date)
     date_str = dt.strftime("%Y-%m-%d") if dt else event_date[:10]
 
     return {
         "date":     date_str,
+        "event_id": event.get("id"),
         "league":   event.get("league_name", "?"),
         "home":     event.get("home_team", "?"),
         "away":     event.get("away_team", "?"),
@@ -147,14 +185,162 @@ def make_record(pred, result):
         "po": round(po,1), "pb": round(pb,1), "xg": xgt,
         "conf": conf,
         "pred": pred_r, "real": real,
-        "pick_1x2":  best >= 61,
-        "pick_o25":  po >= 61,
-        "pick_btts": pb >= 61,
-        "pick_xg":   xgt > 0,
+        "pick_1x2":  best >= 61 and conf == "MÉDIA",
+        "pick_o25":  xgt >= 2.9,
+        "pick_btts": pb >= 61 and conf in ("ALTA", "MÉDIA"),
+        "pick_xg":   xgt >= 2.8,
         "hit_1x2":   pred_r == real,
         "hit_o25":   goals > 2,
         "hit_btts":  hs > 0 and as_ > 0,
+        # Pinnacle odds guardadas no momento da previsão (para ROI futuro)
+        "pin_home":  pin.get("home_odds"),
+        "pin_draw":  pin.get("draw_odds"),
+        "pin_away":  pin.get("away_odds"),
+        "pin_btts":  pin.get("btts_yes"),
+        "pin_o25":   pin.get("over_2_5"),
     }
+
+def migrate_picks(records):
+    """Recalcula pick_* para todos os registos com os novos thresholds."""
+    for r in records:
+        conf = r.get("conf", "BAIXA")
+        best = max(r.get("ph", 0), r.get("pd", 0), r.get("pa", 0))
+        pb   = r.get("pb", 0)
+        xgt  = r.get("xg", 0)
+        r["pick_1x2"]  = best >= 61 and conf == "MÉDIA"
+        r["pick_o25"]  = xgt >= 2.9
+        r["pick_btts"] = pb >= 61 and conf in ("ALTA", "MÉDIA")
+        r["pick_xg"]   = xgt >= 2.8
+    return records
+
+# ── Builder de Triplas ────────────────────────────────────────────────────────
+
+def build_daily_treble(preds):
+    """
+    Selecciona a melhor tripla do dia.
+    Prioridade 1: BTTS com confiança ALTA ou MÉDIA (92% de acerto histórico)
+    Prioridade 2: 1X2 com confiança MÉDIA (100% de acerto histórico, amostra pequena)
+    Regra: máximo 1 pick por liga para evitar correlação
+    """
+    today = today_str()
+    candidates = []
+
+    for p in preds:
+        event  = p.get("event", {})
+        mkts   = p.get("markets", {})
+        bt     = mkts.get("btts", {})
+        mr     = mkts.get("match_result", {})
+        model  = p.get("model", {})
+        pin    = p.get("_pinnacle_odds", {})
+
+        pb       = float(bt.get("prob_yes") or 0)
+        ph       = float(mr.get("prob_home") or 0)
+        pd_v     = float(mr.get("prob_draw") or 0)
+        pa       = float(mr.get("prob_away") or 0)
+        conf_val = float(model.get("confidence") or 0)
+
+        if conf_val >= 0.65:   conf = "ALTA"
+        elif conf_val >= 0.45: conf = "MÉDIA"
+        else:                  conf = "BAIXA"
+
+        league = event.get("league_name", "?")
+        eid    = event.get("id")
+
+        # Prioridade 1: BTTS ALTA ou MÉDIA
+        if pb >= 61 and conf in ("ALTA", "MÉDIA"):
+            pin_odds = pin.get("btts_yes")
+            candidates.append({
+                "priority": 1,
+                "event_id": eid,
+                "league":   league,
+                "home":     event.get("home_team", "?"),
+                "away":     event.get("away_team", "?"),
+                "market":   "BTTS",
+                "prob":     round(pb / 100, 3),
+                "conf":     conf,
+                "odds":     float(pin_odds) if pin_odds else None,
+            })
+            continue
+
+        # Prioridade 2: 1X2 MÉDIA
+        best = max(ph, pd_v, pa)
+        if best >= 61 and conf == "MÉDIA":
+            if best == ph:     side, ok = "H", "home_odds"
+            elif best == pd_v: side, ok = "D", "draw_odds"
+            else:              side, ok = "A", "away_odds"
+            pin_odds = pin.get(ok)
+            candidates.append({
+                "priority": 2,
+                "event_id": eid,
+                "league":   league,
+                "home":     event.get("home_team", "?"),
+                "away":     event.get("away_team", "?"),
+                "market":   f"1X2-{side}",
+                "prob":     round(best / 100, 3),
+                "conf":     conf,
+                "odds":     float(pin_odds) if pin_odds else None,
+            })
+
+    # 1 pick por liga, melhor por prioridade depois prob
+    seen = {}
+    for c in sorted(candidates, key=lambda x: (x["priority"], -x["prob"])):
+        if c["league"] not in seen:
+            seen[c["league"]] = c
+    unique = list(seen.values())
+
+    if len(unique) < 3:
+        return None
+
+    picks = sorted(unique, key=lambda x: (x["priority"], -x["prob"]))[:3]
+    for p in picks:
+        p.pop("priority", None)
+
+    odds_vals = [p["odds"] for p in picks if p.get("odds")]
+    combined = None
+    if len(odds_vals) == 3:
+        combined = round(odds_vals[0] * odds_vals[1] * odds_vals[2], 2)
+
+    return {"date": today, "picks": picks, "combined_odds": combined, "status": "pending"}
+
+def score_treble(treble, records_for_date):
+    """Pontua uma tripla pendente usando os registos reais do dia."""
+    by_match = {}
+    for r in records_for_date:
+        key = (r.get("league", ""), r.get("home", ""), r.get("away", ""))
+        by_match[key] = r
+
+    results = []
+    for pick in treble["picks"]:
+        key = (pick["league"], pick["home"], pick["away"])
+        rec = by_match.get(key)
+        if not rec:
+            return None  # resultado ainda não disponível
+        market = pick["market"]
+        if market == "BTTS":
+            hit = rec.get("hs", 0) > 0 and rec.get("as", 0) > 0
+        elif market == "1X2-H":
+            hit = rec.get("real") == "H"
+        elif market == "1X2-D":
+            hit = rec.get("real") == "D"
+        elif market == "1X2-A":
+            hit = rec.get("real") == "A"
+        else:
+            hit = False
+        results.append(hit)
+
+    won   = all(results)
+    odds  = treble.get("combined_odds")
+    profit = round(odds - 1, 2) if (won and odds) else -1.0
+
+    return {
+        **treble,
+        "status":        "scored",
+        "pick_results":  results,
+        "hit":           won,
+        "profit_1u":     profit,
+    }
+
+# ── Stats e HTML ──────────────────────────────────────────────────────────────
 
 def calc_stats(records, pick_key, hit_key, label):
     subset = [r for r in records if r.get(pick_key)]
@@ -176,7 +362,8 @@ def calc_stats(records, pick_key, hit_key, label):
                 wk = dt.strftime("%Y-W%V")
                 weekly[wk]["p"] += 1
                 if r.get(hit_key): weekly[wk]["h"] += 1
-        except Exception: pass
+        except Exception:
+            pass
     trend = [{"w":wk,"rate":round(v["h"]/v["p"]*100,1),"p":v["p"]}
              for wk,v in sorted(weekly.items())[-8:] if v["p"]>=3]
     return {"label":label,"picks":len(subset),"hits":hits,"rate":rate,"by_conf":by_conf,"trend":trend}
@@ -206,7 +393,157 @@ def rc(rate):
     if rate>=55: return "#fbbf24"
     return "#f87171"
 
-def build_html(history):
+def treble_roi(trebles_history):
+    hist = [t for t in trebles_history if t.get("status") == "scored"]
+    if not hist:
+        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,"roi_pct":0}
+    total    = len(hist)
+    won      = sum(1 for t in hist if t.get("hit"))
+    staked   = float(total)
+    returned = sum(t.get("combined_odds", 0) for t in hist if t.get("hit") and t.get("combined_odds"))
+    roi_pct  = round((returned - staked) / staked * 100, 1) if staked else 0
+    return {
+        "total":   total,
+        "won":     won,
+        "rate":    round(won/total*100, 1) if total else 0,
+        "staked":  staked,
+        "returned":round(returned, 2),
+        "roi_pct": roi_pct,
+    }
+
+def treble_section_html(trebles_data):
+    pending = trebles_data.get("pending", [])
+    history = trebles_data.get("history", [])
+    roi     = treble_roi(history)
+
+    today_treble = next((t for t in pending if t.get("status") == "pending"), None)
+
+    mkt_label = {
+        "BTTS":  "🔁 BTTS",
+        "1X2-H": "🏠 Casa",
+        "1X2-D": "🤝 Empate",
+        "1X2-A": "✈️ Fora",
+    }
+    conf_color = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24", "BAIXA": "#f87171"}
+
+    # Tripla de hoje
+    if today_treble:
+        picks_html = ""
+        for i, pk in enumerate(today_treble["picks"], 1):
+            col   = conf_color.get(pk.get("conf",""), "#94a3b8")
+            mkt   = mkt_label.get(pk["market"], pk["market"])
+            odds  = f"{pk['odds']:.2f}" if pk.get("odds") else "–"
+            picks_html += (
+                f'<div class="tp">'
+                f'<span class="tpn">{i}</span>'
+                f'<div class="tpi">'
+                f'<div class="tpl">{pk["league"]}</div>'
+                f'<div class="tpm">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</div>'
+                f'</div>'
+                f'<div class="tpr">'
+                f'<span class="tpk">{mkt}</span>'
+                f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+                f'<span class="tpo">@{odds}</span>'
+                f'</div></div>'
+            )
+        combined = f"{today_treble['combined_odds']:.2f}" if today_treble.get("combined_odds") else "–"
+        today_html = (
+            f'<div class="tb-today">'
+            f'<div class="tb-today-hdr">'
+            f'<span>🎯 Tripla de Hoje — {today_treble["date"]}</span>'
+            f'<span class="tb-odds">Odds combinadas: <b>{combined}</b></span>'
+            f'</div>'
+            f'{picks_html}'
+            f'<div class="tb-note">Aposta 1 unidade → retorno {combined} unidades se ganhar</div>'
+            f'</div>'
+        )
+    else:
+        today_html = '<div class="tb-empty">Sem tripla para hoje (picks insuficientes com alta confiança).</div>'
+
+    # ROI summary
+    roi_col = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
+    roi_html = (
+        f'<div class="tb-roi">'
+        f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["total"]}</div><div class="tb-roi-l">Triplas</div></div>'
+        f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["won"]}</div><div class="tb-roi-l">Ganhas</div></div>'
+        f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["rate"]}%</div><div class="tb-roi-l">Hit Rate</div></div>'
+        f'<div class="tb-roi-item"><div class="tb-roi-n" style="color:{roi_col}">'
+        f'{"+" if roi["roi_pct"]>=0 else ""}{roi["roi_pct"]}%</div><div class="tb-roi-l">ROI</div></div>'
+        f'</div>'
+    )
+
+    # Histórico de triplas
+    scored = sorted([t for t in history if t.get("status")=="scored"], key=lambda x: x["date"], reverse=True)
+    if scored:
+        rows = ""
+        for t in scored[:10]:
+            won_t   = t.get("hit", False)
+            icon    = "✓" if won_t else "✗"
+            icon_c  = "#4ade80" if won_t else "#f87171"
+            profit  = t.get("profit_1u", -1)
+            p_str   = f'+{profit:.2f}u' if won_t else '-1.00u'
+            p_col   = "#4ade80" if won_t else "#f87171"
+            odds_d  = f"{t['combined_odds']:.2f}" if t.get("combined_odds") else "–"
+            mkt_str = " · ".join(
+                f'{mkt_label.get(pk["market"], pk["market"])} {pk["home"][:12]}'
+                for pk in t.get("picks", [])
+            )
+            results = t.get("pick_results", [])
+            r_icons = "".join("✓" if r else "✗" for r in results)
+            rows += (
+                f'<tr>'
+                f'<td class="tdc">{t["date"]}</td>'
+                f'<td style="font-size:.72rem;color:var(--sub)">{mkt_str}</td>'
+                f'<td class="tdn">{odds_d}</td>'
+                f'<td class="tdn" style="font-family:monospace;color:var(--muted)">{r_icons}</td>'
+                f'<td class="tdn" style="color:{icon_c};font-weight:700">{icon}</td>'
+                f'<td class="tdn" style="color:{p_col};font-weight:700">{p_str}</td>'
+                f'</tr>'
+            )
+        hist_html = (
+            f'<table class="ct" style="margin-top:14px">'
+            f'<thead><tr><th>Data</th><th>Picks</th><th>Odds</th><th>Resultado</th>'
+            f'<th>Win</th><th>Lucro</th></tr></thead>'
+            f'<tbody>{rows}</tbody></table>'
+        )
+    else:
+        hist_html = '<p class="nd" style="margin-top:12px">Sem triplas pontuadas ainda.</p>'
+
+    css_extra = (
+        '.tb-today{background:#0d1e35;border:1px solid #1e4d8c;border-radius:12px;padding:16px;margin-bottom:16px}'
+        '.tb-today-hdr{display:flex;justify-content:space-between;align-items:center;'
+        'font-size:.82rem;font-weight:700;color:#60a5fa;margin-bottom:12px}'
+        '.tb-odds{font-size:.78rem;color:var(--sub)}.tb-odds b{color:var(--text)}'
+        '.tp{display:flex;align-items:center;gap:10px;padding:8px 0;'
+        'border-bottom:1px solid #1a2540}'
+        '.tp:last-of-type{border-bottom:none}'
+        '.tpn{width:20px;height:20px;border-radius:50%;background:#1e3a5f;color:#60a5fa;'
+        'font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}'
+        '.tpi{flex:1;min-width:0}'
+        '.tpl{font-size:.65rem;color:var(--muted);margin-bottom:2px}'
+        '.tpm{font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+        '.tpr{display:flex;gap:8px;align-items:center;flex-shrink:0}'
+        '.tpk{font-size:.72rem;color:var(--sub)}'
+        '.tpo{font-size:.72rem;color:var(--muted)}'
+        '.tb-note{font-size:.68rem;color:var(--muted);margin-top:10px;font-style:italic}'
+        '.tb-empty{color:var(--muted);font-style:italic;font-size:.82rem;padding:10px 0}'
+        '.tb-roi{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}'
+        '.tb-roi-item{flex:1;padding:14px;text-align:center;border-right:1px solid var(--border)}'
+        '.tb-roi-item:last-child{border-right:none}'
+        '.tb-roi-n{font-size:1.4rem;font-weight:800;line-height:1}'
+        '.tb-roi-l{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px}'
+    )
+
+    return css_extra, (
+        f'<div class="stitle">Triplas de Apostas</div>'
+        f'<div class="sc" style="margin-bottom:28px">'
+        f'{roi_html}'
+        f'{today_html}'
+        f'{hist_html}'
+        f'</div>'
+    )
+
+def build_html(history, trebles_data=None):
     records   = history.get("records",[])
     processed = history.get("dates_processed",[])
     now       = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -214,13 +551,18 @@ def build_html(history):
     date_min  = min((r["date"] for r in records),default="–")
     date_max  = max((r["date"] for r in records),default="–")
 
-    s1  = calc_stats(records,"pick_1x2","hit_1x2","1X2")
-    s2  = calc_stats(records,"pick_o25","hit_o25","Over 2.5")
-    s3  = calc_stats(records,"pick_btts","hit_btts","BTTS")
+    s1  = calc_stats(records,"pick_1x2","hit_1x2","1X2 (MÉDIA)")
+    s2  = calc_stats(records,"pick_o25","hit_o25","Over 2.5 (xG≥2.9)")
+    s3  = calc_stats(records,"pick_btts","hit_btts","BTTS (ALTA+MÉDIA)")
     sxg = calc_xg(records)
     tl1 = top_leagues(records,"pick_1x2","hit_1x2")
     tl2 = top_leagues(records,"pick_o25","hit_o25")
     tl3 = top_leagues(records,"pick_btts","hit_btts")
+
+    treble_css  = ""
+    treble_body = ""
+    if trebles_data:
+        treble_css, treble_body = treble_section_html(trebles_data)
 
     def stat_card(s):
         col = rc(s["rate"])
@@ -286,6 +628,7 @@ def build_html(history):
         )
     else:
         body = (
+            f'{treble_body}'
             f'<div class="info">'
             f'<span>📅 <b>{date_min}</b> → <b>{date_max}</b></span>'
             f'<span>🎯 Jogos: <b>{total}</b></span>'
@@ -298,7 +641,6 @@ def build_html(history):
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
         )
 
-    # CSS inline (mesmo do original, condensado)
     css = (
         ':root{--bg:#0d1117;--card:#1c2333;--border:#2d3748;--blue:#60a5fa;--green:#4ade80;'
         '--yellow:#fbbf24;--red:#f87171;--text:#f1f5f9;--sub:#94a3b8;--muted:#4a5568}'
@@ -345,6 +687,7 @@ def build_html(history):
         '.empty p{font-size:.88rem;line-height:1.8}'
         '.footer{text-align:center;padding:28px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border)}'
         '@media(max-width:580px){.wrap,.hdr{padding-left:14px;padding-right:14px}}'
+        + treble_css
     )
 
     return (
@@ -366,15 +709,19 @@ def build_html(history):
         f'</body></html>'
     )
 
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 def main():
-    today     = today_str()
-    yesterday = yesterday_str()
-    now_utc   = datetime.now(timezone.utc)
-
+    today = today_str()
     os.makedirs("docs", exist_ok=True)
-    history = load_history()
 
-    # ── MODO SAVE: guardar predições de hoje ─────────────────────
+    history = load_history()
+    trebles = load_trebles()
+
+    # Migrar todos os registos existentes para os novos thresholds de pick
+    history["records"] = migrate_picks(history.get("records", []))
+
+    # ── MODO SAVE ────────────────────────────────────────────────────────────
     save_file = preds_file(today)
     if not os.path.exists(save_file):
         print(f"[backtest] SAVE: a guardar predições de {today}...")
@@ -387,12 +734,29 @@ def main():
     else:
         print(f"[backtest] SAVE: {save_file} já existe — a saltar")
 
-    # ── FIX BUG 2: SCORE tenta processar TODOS os dias pendentes ─
-    # Não apenas ontem — procura todos os preds_*.json não processados
-    processed = history.get("dates_processed", [])
-    partial   = history.get("dates_partial", {})
+    # Tentar construir tripla do dia (da preds file actual ou existente)
+    today_built = any(
+        t.get("date") == today
+        for t in trebles.get("pending", []) + trebles.get("history", [])
+    )
+    if not today_built and os.path.exists(save_file):
+        try:
+            with open(save_file, encoding="utf-8") as f:
+                preds = json.load(f)
+            treble = build_daily_treble(preds)
+            if treble:
+                trebles.setdefault("pending", []).append(treble)
+                odds_str = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "?"
+                print(f"[backtest] Tripla do dia: {len(treble['picks'])} picks, odds={odds_str} ✓")
+            else:
+                print("[backtest] Picks insuficientes para tripla hoje")
+            save_trebles(trebles)
+        except Exception as e:
+            print(f"[backtest] Erro ao construir tripla: {e}")
 
-    # Listar todos os ficheiros preds_*.json disponíveis
+    # ── MODO SCORE ───────────────────────────────────────────────────────────
+    processed = history.get("dates_processed", [])
+
     all_pred_files = [
         f for f in os.listdir("docs")
         if f.startswith("preds_") and f.endswith(".json")
@@ -401,9 +765,9 @@ def main():
     for fname in sorted(all_pred_files):
         date_str = fname.replace("preds_","").replace(".json","")
         if date_str == today:
-            continue  # hoje ainda não terminou
+            continue
         if date_str in processed:
-            continue  # já processado com sucesso
+            continue
         pending_dates.append(date_str)
 
     print(f"[backtest] Datas pendentes para SCORE: {pending_dates or 'nenhuma'}")
@@ -437,11 +801,8 @@ def main():
 
         print(f"[backtest] {found}/{len(preds)} com resultado | {not_finished} sem resultado")
 
-        # Só marcar como processado se encontrámos a maioria dos resultados
-        # (evita marcar como done se a BSD ainda não tem os scores)
         coverage = found / len(preds) if preds else 0
         if coverage >= 0.7:
-            # Remover registos antigos deste dia (para não duplicar em re-runs)
             history["records"] = [r for r in history.get("records",[]) if r.get("date") != date_str]
             history["records"].extend(new_records)
             history["dates_processed"] = list(set(processed + [date_str]))
@@ -449,7 +810,6 @@ def main():
             new_records_total += len(new_records)
             print(f"[backtest] {date_str} marcado como processado ({coverage:.0%} cobertura)")
         else:
-            # Guardar parcialmente mas tentar de novo amanhã
             history["records"] = [r for r in history.get("records",[]) if r.get("date") != date_str]
             history["records"].extend(new_records)
             history.setdefault("dates_partial", {})[date_str] = found
@@ -460,8 +820,28 @@ def main():
     if new_records_total > 0:
         print(f"[backtest] Total acumulado: {len(history['records'])} jogos")
 
-    # Gerar HTML sempre
-    html = build_html(history)
+    # Pontuar triplas pendentes cujas datas já foram processadas
+    still_pending = []
+    for treble in trebles.get("pending", []):
+        t_date = treble.get("date", "")
+        if t_date in history.get("dates_processed", []):
+            recs_for_date = [r for r in history.get("records", []) if r.get("date") == t_date]
+            scored = score_treble(treble, recs_for_date)
+            if scored:
+                trebles.setdefault("history", []).append(scored)
+                result_str = "✓ GANHOU" if scored["hit"] else "✗ PERDEU"
+                odds_str   = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "?"
+                print(f"[backtest] Tripla {t_date}: {result_str} (odds={odds_str})")
+            else:
+                still_pending.append(treble)
+        else:
+            still_pending.append(treble)
+
+    trebles["pending"] = still_pending
+    save_trebles(trebles)
+
+    # Gerar HTML com secção de triplas
+    html = build_html(history, trebles)
     with open("docs/backtest.html", "w", encoding="utf-8") as f:
         f.write(html)
     print("[backtest] docs/backtest.html gerado ✓")
