@@ -378,6 +378,275 @@ def calc_xg(records):
         "over_rate": round(sum(1 for r in s if r["goals"]>r["xg"])/len(s)*100,1),
     }
 
+def calc_xg_analysis(records):
+    valid = [r for r in records if r.get("xg", 0) > 0 and r.get("goals") is not None]
+    if not valid:
+        return None
+
+    by_league = defaultdict(lambda: {"xg": [], "g": []})
+    by_date   = defaultdict(lambda: {"xg": [], "g": []})
+    for r in valid:
+        by_league[r["league"]]["xg"].append(r["xg"])
+        by_league[r["league"]]["g"].append(r["goals"])
+        by_date[r["date"]]["xg"].append(r["xg"])
+        by_date[r["date"]]["g"].append(r["goals"])
+
+    league_stats = []
+    for lg, d in by_league.items():
+        if len(d["xg"]) < 3:
+            continue
+        ax = round(sum(d["xg"]) / len(d["xg"]), 2)
+        ag = round(sum(d["g"]) / len(d["g"]), 2)
+        league_stats.append({"league": lg, "n": len(d["xg"]), "avg_xg": ax, "avg_goals": ag, "diff": round(ag - ax, 2)})
+    league_stats.sort(key=lambda x: x["diff"])
+
+    date_trend = []
+    for dt in sorted(by_date):
+        d = by_date[dt]
+        date_trend.append({
+            "date": dt[-5:],
+            "avg_xg":    round(sum(d["xg"]) / len(d["xg"]), 2),
+            "avg_goals": round(sum(d["g"]) / len(d["g"]), 2),
+            "n": len(d["xg"]),
+        })
+
+    errors = [r["goals"] - r["xg"] for r in valid]
+    buckets = [
+        ("< −2",  sum(1 for e in errors if e < -2)),
+        ("−2 a −1", sum(1 for e in errors if -2 <= e < -1)),
+        ("−1 a 0",  sum(1 for e in errors if -1 <= e < 0)),
+        ("0 a 1",   sum(1 for e in errors if 0 <= e < 1)),
+        ("1 a 2",   sum(1 for e in errors if 1 <= e < 2)),
+        ("> 2",    sum(1 for e in errors if e >= 2)),
+    ]
+
+    n = len(valid)
+    over_n = sum(1 for e in errors if e > 0)
+    under_n = sum(1 for e in errors if e < 0)
+    avg_err = round(sum(errors) / n, 2)
+
+    return {
+        "scatter": [{"xg": r["xg"], "goals": r["goals"], "league": r["league"], "date": r["date"]} for r in valid],
+        "league_stats": league_stats,
+        "date_trend":   date_trend,
+        "buckets":      buckets,
+        "summary": {
+            "n": n,
+            "avg_xg":    round(sum(r["xg"]    for r in valid) / n, 2),
+            "avg_goals": round(sum(r["goals"]  for r in valid) / n, 2),
+            "avg_err":   avg_err,
+            "over_pct":  round(over_n  / n * 100),
+            "under_pct": round(under_n / n * 100),
+        },
+    }
+
+def _scatter_svg(scatter):
+    W, H = 400, 300
+    ML, MR, MT, MB = 42, 16, 16, 38
+    pw, ph = W - ML - MR, H - MT - MB
+    MX = 6.5
+
+    def sx(v): return ML + min(v, MX) / MX * pw
+    def sy(v): return MT + ph - min(v, MX) / MX * ph
+
+    out = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="display:block;max-width:{W}px">']
+    # grid + labels
+    for i in range(0, 8):
+        x, y = sx(i), sy(i)
+        out.append(f'<line x1="{x:.0f}" y1="{MT}" x2="{x:.0f}" y2="{MT+ph}" stroke="#1e2a3a" stroke-width="1"/>')
+        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1"/>')
+        if i > 0:
+            out.append(f'<text x="{x:.0f}" y="{MT+ph+14}" fill="#4a5568" font-size="10" text-anchor="middle">{i}</text>')
+            out.append(f'<text x="{ML-6}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{i}</text>')
+    # Over 2.5 dashed threshold
+    x25, y25 = sx(2.5), sy(2.5)
+    out.append(f'<line x1="{x25:.0f}" y1="{MT}" x2="{x25:.0f}" y2="{MT+ph}" stroke="#4a5568" stroke-width="1" stroke-dasharray="4,3"/>')
+    out.append(f'<line x1="{ML}" y1="{y25:.0f}" x2="{ML+pw}" y2="{y25:.0f}" stroke="#4a5568" stroke-width="1" stroke-dasharray="4,3"/>')
+    out.append(f'<text x="{x25+3:.0f}" y="{MT+10}" fill="#4a5568" font-size="9">2.5</text>')
+    # Perfect calibration diagonal
+    out.append(f'<line x1="{sx(0):.0f}" y1="{sy(0):.0f}" x2="{sx(MX):.0f}" y2="{sy(MX):.0f}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>')
+    # Points
+    for d in scatter:
+        xg, g = d["xg"], d["goals"]
+        diff = g - xg
+        col = "#4ade80" if diff > 0.3 else ("#f87171" if diff < -0.3 else "#60a5fa")
+        lg  = d["league"].replace('"', "'").replace('<', '')
+        out.append(f'<circle cx="{sx(xg):.1f}" cy="{sy(g):.1f}" r="4.5" fill="{col}" opacity="0.75" stroke="#0d1117" stroke-width="1"><title>{lg}\nxG={xg:.1f}  Golos={g}</title></circle>')
+    # Axis labels
+    out.append(f'<text x="{ML+pw/2:.0f}" y="{H-2}" fill="#94a3b8" font-size="11" text-anchor="middle">xG Previsto</text>')
+    out.append(f'<text x="11" y="{MT+ph/2:.0f}" fill="#94a3b8" font-size="11" text-anchor="middle" transform="rotate(-90,11,{MT+ph/2:.0f})">Golos Reais</text>')
+    # Legend
+    out.append(f'<circle cx="{ML+4}" cy="{MT+6}" r="4" fill="#4ade80" opacity="0.8"/><text x="{ML+12}" y="{MT+10}" fill="#4ade80" font-size="9">Subestimado</text>')
+    out.append(f'<circle cx="{ML+80}" cy="{MT+6}" r="4" fill="#f87171" opacity="0.8"/><text x="{ML+88}" y="{MT+10}" fill="#f87171" font-size="9">Sobreavaliado</text>')
+    out.append(f'<circle cx="{ML+168}" cy="{MT+6}" r="4" fill="#60a5fa" opacity="0.8"/><text x="{ML+176}" y="{MT+10}" fill="#60a5fa" font-size="9">Calibrado</text>')
+    out.append('</svg>')
+    return "".join(out)
+
+def _trend_svg(date_trend):
+    if len(date_trend) < 2:
+        return ""
+    W, H = 420, 180
+    ML, MR, MT, MB = 42, 16, 24, 34
+    pw, ph = W - ML - MR, H - MT - MB
+    n = len(date_trend)
+    all_vals = [d["avg_xg"] for d in date_trend] + [d["avg_goals"] for d in date_trend]
+    MX = max(all_vals) * 1.15 or 4.0
+
+    def sx(i): return ML + i / (n - 1) * pw if n > 1 else ML + pw / 2
+    def sy(v): return MT + ph - v / MX * ph
+
+    out = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="display:block;max-width:{W}px">']
+    # horizontal grid
+    for v in [1, 2, 3, 4]:
+        if v <= MX:
+            y = sy(v)
+            out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1"/>')
+            out.append(f'<text x="{ML-6}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{v}</text>')
+    # xG line
+    xg_pts = " ".join(f"{sx(i):.1f},{sy(d['avg_xg']):.1f}" for i, d in enumerate(date_trend))
+    g_pts  = " ".join(f"{sx(i):.1f},{sy(d['avg_goals']):.1f}" for i, d in enumerate(date_trend))
+    out.append(f'<polyline points="{xg_pts}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round"/>')
+    out.append(f'<polyline points="{g_pts}" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linejoin="round"/>')
+    for i, d in enumerate(date_trend):
+        out.append(f'<circle cx="{sx(i):.1f}" cy="{sy(d["avg_xg"]):.1f}" r="4" fill="#60a5fa"><title>{d["date"]}: xG médio={d["avg_xg"]}</title></circle>')
+        out.append(f'<circle cx="{sx(i):.1f}" cy="{sy(d["avg_goals"]):.1f}" r="4" fill="#4ade80"><title>{d["date"]}: Golos médios={d["avg_goals"]}</title></circle>')
+        out.append(f'<text x="{sx(i):.1f}" y="{MT+ph+14}" fill="#4a5568" font-size="9" text-anchor="middle">{d["date"]}</text>')
+    # legend
+    out.append(f'<line x1="{ML}" y1="{MT-8}" x2="{ML+16}" y2="{MT-8}" stroke="#60a5fa" stroke-width="2.5"/>')
+    out.append(f'<text x="{ML+20}" y="{MT-4}" fill="#60a5fa" font-size="10">xG Previsto</text>')
+    out.append(f'<line x1="{ML+90}" y1="{MT-8}" x2="{ML+106}" y2="{MT-8}" stroke="#4ade80" stroke-width="2.5"/>')
+    out.append(f'<text x="{ML+110}" y="{MT-4}" fill="#4ade80" font-size="10">Golos Reais</text>')
+    out.append('</svg>')
+    return "".join(out)
+
+def xg_analysis_html(records):
+    data = calc_xg_analysis(records)
+    if not data:
+        return "", ""
+
+    s   = data["summary"]
+    err_col = "#4ade80" if s["avg_err"] >= -0.1 else "#f87171"
+
+    # Cartões de sumário
+    summary_html = (
+        f'<div class="xga-summary">'
+        f'<div class="xga-card"><div class="xga-n">{s["n"]}</div><div class="xga-l">Jogos</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:#60a5fa">{s["avg_xg"]}</div><div class="xga-l">xG Médio Previsto</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:#4ade80">{s["avg_goals"]}</div><div class="xga-l">Golos Médios Reais</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:{err_col}">{"+" if s["avg_err"]>=0 else ""}{s["avg_err"]}</div><div class="xga-l">Erro Médio (g−xG)</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:#f87171">{s["under_pct"]}%</div><div class="xga-l">Modelo Sobreavalia</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:#4ade80">{s["over_pct"]}%</div><div class="xga-l">Modelo Subestima</div></div>'
+        f'</div>'
+    )
+
+    # Scatter plot
+    scatter_html = (
+        f'<div class="xga-panel">'
+        f'<div class="xga-panel-title">Calibração — xG Previsto vs Golos Reais</div>'
+        f'<div class="xga-panel-sub">Linha vermelha = modelo perfeito · Linhas tracejadas = limiar Over 2.5 · Toca num ponto para ver o jogo</div>'
+        f'{_scatter_svg(data["scatter"])}'
+        f'</div>'
+    )
+
+    # Histograma de erro
+    max_bucket = max(v for _, v in data["buckets"]) or 1
+    bucket_bars = ""
+    for label, cnt in data["buckets"]:
+        pct = cnt / max_bucket * 100
+        # negativo = modelo sobravalia (vermelho), positivo = subestima (verde)
+        col = "#f87171" if label.startswith(("< −", "−")) else ("#4ade80" if label.startswith((">", "1", "0")) else "#60a5fa")
+        if label in ("−1 a 0", "0 a 1"):
+            col = "#fbbf24"
+        bucket_bars += (
+            f'<div class="xga-bucket">'
+            f'<div class="xga-bucket-lbl">{label}</div>'
+            f'<div class="xga-bucket-bar-bg"><div class="xga-bucket-bar-fill" style="width:{pct:.0f}%;background:{col}"></div></div>'
+            f'<div class="xga-bucket-n">{cnt}</div>'
+            f'</div>'
+        )
+    hist_html = (
+        f'<div class="xga-panel">'
+        f'<div class="xga-panel-title">Distribuição do Erro (Golos − xG)</div>'
+        f'<div class="xga-panel-sub">Negativo = modelo sobreavalia · Positivo = modelo subestima</div>'
+        f'<div class="xga-buckets">{bucket_bars}</div>'
+        f'</div>'
+    )
+
+    # Tendência por data
+    trend_html = (
+        f'<div class="xga-panel">'
+        f'<div class="xga-panel-title">Evolução Diária — xG vs Golos</div>'
+        f'<div class="xga-panel-sub">Média por dia · Passa o rato sobre os pontos para ver detalhes</div>'
+        f'{_trend_svg(data["date_trend"])}'
+        f'</div>'
+    )
+
+    # Tabela por liga
+    league_rows = ""
+    for lg in data["league_stats"]:
+        diff = lg["diff"]
+        diff_col = "#4ade80" if diff > 0.3 else ("#f87171" if diff < -0.3 else "#fbbf24")
+        diff_str = f'{"+" if diff>=0 else ""}{diff:.2f}'
+        max_v    = max(lg["avg_xg"], lg["avg_goals"]) or 1
+        xg_w     = int(lg["avg_xg"] / 5 * 100)
+        g_w      = int(lg["avg_goals"] / 5 * 100)
+        league_rows += (
+            f'<tr>'
+            f'<td class="tdl" style="white-space:nowrap">{lg["league"]}</td>'
+            f'<td class="tdn" style="color:var(--muted)">{lg["n"]}</td>'
+            f'<td style="min-width:120px;padding:6px">'
+            f'  <div style="font-size:.65rem;color:#60a5fa;margin-bottom:2px">{lg["avg_xg"]:.2f}</div>'
+            f'  <div style="height:4px;background:#1e2a3a;border-radius:2px"><div style="width:{xg_w}%;height:100%;background:#60a5fa;border-radius:2px"></div></div>'
+            f'</td>'
+            f'<td style="min-width:120px;padding:6px">'
+            f'  <div style="font-size:.65rem;color:#4ade80;margin-bottom:2px">{lg["avg_goals"]:.2f}</div>'
+            f'  <div style="height:4px;background:#1e2a3a;border-radius:2px"><div style="width:{g_w}%;height:100%;background:#4ade80;border-radius:2px"></div></div>'
+            f'</td>'
+            f'<td class="tdn" style="color:{diff_col};font-weight:700;font-size:.9rem">{diff_str}</td>'
+            f'</tr>'
+        )
+    league_html = (
+        f'<div class="xga-panel">'
+        f'<div class="xga-panel-title">Calibração por Liga (mín. 3 jogos)</div>'
+        f'<div class="xga-panel-sub">Negativo = modelo sobrestima golos · Positivo = modelo subestima golos</div>'
+        f'<table class="ct" style="margin-top:12px">'
+        f'<thead><tr><th>Liga</th><th>Jogos</th><th style="min-width:120px">xG Médio</th>'
+        f'<th style="min-width:120px">Golos Médios</th><th>Diferença</th></tr></thead>'
+        f'<tbody>{league_rows}</tbody></table>'
+        f'</div>'
+    )
+
+    # Layout 2 colunas no top (scatter + histogram), depois full-width
+    body = (
+        f'<div class="stitle" style="margin-top:28px">Análise Avançada xG</div>'
+        f'{summary_html}'
+        f'<div class="xga-grid2">'
+        f'{scatter_html}'
+        f'{hist_html}'
+        f'</div>'
+        f'{trend_html}'
+        f'{league_html}'
+    )
+
+    css = (
+        '.xga-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px}'
+        '.xga-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}'
+        '.xga-n{font-size:1.5rem;font-weight:800;line-height:1}'
+        '.xga-l{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px}'
+        '.xga-grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px}'
+        '.xga-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}'
+        '.xga-panel-title{font-size:.9rem;font-weight:700;margin-bottom:4px}'
+        '.xga-panel-sub{font-size:.68rem;color:var(--muted);margin-bottom:14px}'
+        '.xga-buckets{display:flex;flex-direction:column;gap:8px}'
+        '.xga-bucket{display:flex;align-items:center;gap:10px}'
+        '.xga-bucket-lbl{width:60px;font-size:.72rem;color:var(--sub);text-align:right;flex-shrink:0}'
+        '.xga-bucket-bar-bg{flex:1;height:16px;background:#0f1420;border-radius:4px;overflow:hidden}'
+        '.xga-bucket-bar-fill{height:100%;border-radius:4px;transition:width .4s}'
+        '.xga-bucket-n{width:28px;font-size:.75rem;font-weight:700;color:var(--text);text-align:right;flex-shrink:0}'
+    )
+
+    return css, body
+
 def top_leagues(records, pick_key, hit_key, n=8):
     by = defaultdict(lambda:{"p":0,"h":0})
     for r in records:
@@ -564,6 +833,8 @@ def build_html(history, trebles_data=None):
     if trebles_data:
         treble_css, treble_body = treble_section_html(trebles_data)
 
+    xga_css, xga_body = xg_analysis_html(records)
+
     def stat_card(s):
         col = rc(s["rate"])
         bw  = int(s["rate"])
@@ -639,6 +910,7 @@ def build_html(history, trebles_data=None):
             f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{xg_card}</div>'
             f'<div class="stitle">Top Ligas (mín. 5 picks)</div>'
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
+            f'{xga_body}'
         )
 
     css = (
@@ -686,8 +958,9 @@ def build_html(history, trebles_data=None):
         '.empty{text-align:center;padding:60px 20px;color:var(--muted)}.ebig{font-size:3rem;margin-bottom:12px}'
         '.empty p{font-size:.88rem;line-height:1.8}'
         '.footer{text-align:center;padding:28px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border)}'
-        '@media(max-width:580px){.wrap,.hdr{padding-left:14px;padding-right:14px}}'
-        + treble_css
+        '@media(max-width:580px){.wrap,.hdr{padding-left:14px;padding-right:14px}'
+        '.xga-grid2{grid-template-columns:1fr}}'
+        + treble_css + xga_css
     )
 
     return (
