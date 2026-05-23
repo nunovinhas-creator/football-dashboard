@@ -671,6 +671,84 @@ def top_leagues(records, pick_key, hit_key, n=8):
           for lg,v in by.items() if v["p"]>=5]
     return sorted(rows,key=lambda x:x["rate"],reverse=True)[:n]
 
+def btts_league_monitor(records, min_games=2):
+    """
+    Taxa raw de BTTS (todos os jogos) por liga — detecta padrões sistémicos
+    antes de chegar a picks qualificados. Base para futuro EXCLUDED_LEAGUES dinâmico.
+    """
+    by = defaultdict(lambda: {"n": 0, "h": 0, "pick_n": 0, "pick_h": 0})
+    for r in records:
+        lg = r.get("league", "?")
+        by[lg]["n"] += 1
+        if r.get("hit_btts"): by[lg]["h"] += 1
+        if r.get("pick_btts"):
+            by[lg]["pick_n"] += 1
+            if r.get("hit_btts"): by[lg]["pick_h"] += 1
+    rows = []
+    for lg, v in by.items():
+        if v["n"] < min_games:
+            continue
+        raw_rate = round(v["h"] / v["n"] * 100, 1)
+        pick_rate = round(v["pick_h"] / v["pick_n"] * 100, 1) if v["pick_n"] else None
+        rows.append({
+            "league":    lg,
+            "n":         v["n"],
+            "raw_rate":  raw_rate,
+            "pick_n":    v["pick_n"],
+            "pick_rate": pick_rate,
+        })
+    return sorted(rows, key=lambda x: x["raw_rate"])
+
+def btts_monitor_html(records):
+    rows = btts_league_monitor(records, min_games=2)
+    if not rows:
+        return "", ""
+
+    def risk(rate):
+        if rate < 50:  return ("ALTO",  "#f87171", "#3b0a0a")
+        if rate < 65:  return ("MÉDIO", "#fbbf24", "#2a1f00")
+        return              ("BAIXO", "#4ade80", "#0d2818")
+
+    table_rows = ""
+    for r in rows:
+        lbl, col, bg = risk(r["raw_rate"])
+        bar_w = int(r["raw_rate"])
+        pick_str = f'{r["pick_rate"]:.0f}%' if r["pick_rate"] is not None else "–"
+        pick_col = rc(r["pick_rate"]) if r["pick_rate"] is not None else "#4a5568"
+        excl = " 🚫" if r["league"] in EXCLUDED_LEAGUES else ""
+        table_rows += (
+            f'<tr>'
+            f'<td class="tdl" style="white-space:nowrap">{r["league"]}{excl}</td>'
+            f'<td class="tdn" style="color:var(--muted)">{r["n"]}</td>'
+            f'<td style="min-width:130px;padding:6px 8px">'
+            f'  <div style="font-size:.68rem;color:{col};margin-bottom:2px">{r["raw_rate"]:.0f}%</div>'
+            f'  <div style="height:4px;background:#0f1420;border-radius:2px">'
+            f'    <div style="width:{bar_w}%;height:100%;background:{col};border-radius:2px"></div></div>'
+            f'</td>'
+            f'<td class="tdn" style="color:{pick_col};font-weight:700">{pick_str}</td>'
+            f'<td style="text-align:center"><span style="font-size:.65rem;font-weight:700;'
+            f'padding:2px 7px;border-radius:10px;background:{bg};color:{col}">{lbl}</span></td>'
+            f'</tr>'
+        )
+
+    body = (
+        f'<div class="stitle" style="margin-top:28px">Monitor de Ligas — BTTS</div>'
+        f'<div class="sc">'
+        f'<div style="font-size:.72rem;color:var(--muted);margin-bottom:14px">'
+        f'Taxa bruta de BTTS por liga (mín. {2} jogos). '
+        f'Base de dados para excluir ligas sistematicamente problemáticas das triplas.'
+        f'</div>'
+        f'<table class="ct">'
+        f'<thead><tr>'
+        f'<th>Liga</th><th>Jogos</th><th style="min-width:130px">Taxa BTTS Bruta</th>'
+        f'<th>Pick BTTS</th><th>Risco</th>'
+        f'</tr></thead>'
+        f'<tbody>{table_rows}</tbody>'
+        f'</table>'
+        f'</div>'
+    )
+    return "", body
+
 def rc(rate):
     if rate>=65: return "#4ade80"
     if rate>=55: return "#fbbf24"
@@ -860,6 +938,7 @@ def build_html(history, trebles_data=None):
         treble_css, treble_body = treble_section_html(trebles_data)
 
     xga_css, xga_body = xg_analysis_html(records)
+    _,       mon_body = btts_monitor_html(records)
 
     def stat_card(s):
         col = rc(s["rate"])
@@ -936,6 +1015,7 @@ def build_html(history, trebles_data=None):
             f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{xg_card}</div>'
             f'<div class="stitle">Top Ligas (mín. 5 picks)</div>'
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
+            f'{mon_body}'
             f'{xga_body}'
         )
 
