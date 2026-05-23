@@ -215,12 +215,18 @@ def migrate_picks(records):
 
 # ── Builder de Triplas ────────────────────────────────────────────────────────
 
+EXCLUDED_LEAGUES = {
+    # xG sistematicamente sobreavaliado (-0.54 golos médios); 0% hit rate BTTS e O25 em amostra
+    "Saudi Pro League",
+}
+
 def build_daily_treble(preds):
     """
     Selecciona a melhor tripla do dia.
     Prioridade 1: BTTS com confiança ALTA ou MÉDIA (92% de acerto histórico)
     Prioridade 2: 1X2 com confiança MÉDIA (100% de acerto histórico, amostra pequena)
     Regra: máximo 1 pick por liga para evitar correlação
+    Ligas excluídas: xG sobreavaliado sistematicamente (ver EXCLUDED_LEAGUES)
     """
     today = today_str()
     candidates = []
@@ -245,6 +251,9 @@ def build_daily_treble(preds):
 
         league = event.get("league_name", "?")
         eid    = event.get("id")
+
+        if league in EXCLUDED_LEAGUES:
+            continue
 
         # Prioridade 1: BTTS ALTA ou MÉDIA
         if pb >= 61 and conf in ("ALTA", "MÉDIA"):

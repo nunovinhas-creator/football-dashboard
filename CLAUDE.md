@@ -208,6 +208,7 @@ The `migrate_picks()` function in backtest.py recomputes these for all historica
 2. **Priority 2**: 1X2 with MÉDIA confidence only (fill when BTTS insufficient)
 3. **Max 1 pick per league** — prevents correlated outcomes
 4. **Requires ≥ 3 qualifying picks** — no treble generated if insufficient
+5. **Excluded leagues** (`EXCLUDED_LEAGUES` set): Saudi Pro League — xG systematically overestimated (−0.54 goals avg), 0% hit rate on both BTTS and O25 in historical data
 
 **Persistence** — `docs/trebles.json`:
 ```json
