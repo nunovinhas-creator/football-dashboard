@@ -181,6 +181,23 @@ def make_record(pred, result):
     dt = parse_dt(event_date)
     date_str = dt.strftime("%Y-%m-%d") if dt else event_date[:10]
 
+    # Previsão de golos: xG (base) + BTTS (ajuste de distribuição) + Poisson O25
+    import math as _math
+    bp_frac = pb / 100
+    op_frac = po / 100
+    if bp_frac >= 0.55:
+        pull   = min((bp_frac - 0.55) / 0.40, 1.0)
+        gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
+    else:
+        gp_adj = xgt
+    # P(Over 2.5) via Poisson(lambda=gp_adj)
+    _p_le2    = _math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+    xg_poiss  = max(0.0, min(1.0, 1.0 - _p_le2))
+    o25_comb  = round(op_frac * 0.55 + xg_poiss * 0.45, 3)
+    gp_low    = max(0, int(gp_adj))
+    gp_high   = gp_low + 1
+    pick_goals = o25_comb >= 0.60 and bp_frac >= 0.60  # sinal forte Over 2.5 + BTTS
+
     return {
         "date":     date_str,
         "event_id": event.get("id"),
@@ -199,6 +216,13 @@ def make_record(pred, result):
         "hit_1x2":   pred_r == real,
         "hit_o25":   goals > 2,
         "hit_btts":  hs > 0 and as_ > 0,
+        # Previsão de golos (xG + BTTS combinados)
+        "pred_goals":     round(gp_adj, 2),
+        "pred_goals_range": f"{gp_low}-{gp_high}",
+        "o25_combined":   o25_comb,
+        "pick_goals":     pick_goals,
+        "hit_goal_range": gp_low <= goals <= gp_high,
+        "hit_goals_o25":  goals > 2,
         # Pinnacle odds guardadas no momento da previsão (para ROI futuro)
         "pin_home":  pin.get("home_odds"),
         "pin_draw":  pin.get("draw_odds"),
@@ -218,6 +242,25 @@ def migrate_picks(records):
         r["pick_o25"]  = xgt >= 2.9 and conf in ("ALTA", "MÉDIA")
         r["pick_btts"] = pb >= 61 and conf in ("ALTA", "MÉDIA")
         r["pick_xg"]   = xgt >= 2.8
+        # Previsão de golos xG+BTTS+Poisson
+        import math as _m
+        bp_f = pb / 100
+        op_f = r.get("po", 0) / 100
+        if bp_f >= 0.55:
+            pull   = min((bp_f - 0.55) / 0.40, 1.0)
+            gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
+        else:
+            gp_adj = xgt
+        _p2   = _m.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+        xgp   = max(0.0, min(1.0, 1.0 - _p2))
+        o25c  = round(op_f * 0.55 + xgp * 0.45, 3)
+        gp_low = max(0, int(gp_adj))
+        r["pred_goals"]       = round(gp_adj, 2)
+        r["pred_goals_range"] = f"{gp_low}-{gp_low+1}"
+        r["o25_combined"]     = o25c
+        r["pick_goals"]       = o25c >= 0.60 and bp_f >= 0.60
+        goals = r.get("goals", -1)
+        r["hit_goal_range"]   = gp_low <= goals <= gp_low + 1 if goals >= 0 else False
     return records
 
 # ── Builder de Triplas ────────────────────────────────────────────────────────
@@ -934,6 +977,7 @@ def build_html(history, trebles_data=None):
     s1  = calc_stats(records,"pick_1x2","hit_1x2","1X2 (MÉDIA)")
     s2  = calc_stats(records,"pick_o25","hit_o25","Over 2.5 (xG≥2.9)")
     s3  = calc_stats(records,"pick_btts","hit_btts","BTTS (ALTA+MÉDIA)")
+    s4  = calc_stats(records,"pick_goals","hit_goal_range","Golos xG+BTTS (range)")
     sxg = calc_xg(records)
     tl1 = top_leagues(records,"pick_1x2","hit_1x2")
     tl2 = top_leagues(records,"pick_o25","hit_o25")
@@ -1019,7 +1063,7 @@ def build_html(history, trebles_data=None):
             f'<span class="grow">A crescer diariamente ↑</span>'
             f'</div>'
             f'<div class="stitle">Taxa de Acerto por Mercado</div>'
-            f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{xg_card}</div>'
+            f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{stat_card(s4)}{xg_card}</div>'
             f'<div class="stitle">Top Ligas (mín. 5 picks)</div>'
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
             f'{mon_body}'

@@ -135,6 +135,69 @@ def league_flag(name):
             return v
     return "⚽"
 
+def _poisson_over2(lam):
+    """P(X > 2) para distribuição Poisson(lambda) — sem imports externos."""
+    import math
+    if lam <= 0:
+        return 0.0
+    p_le2 = math.exp(-lam) * (1.0 + lam + lam**2 / 2.0)
+    return max(0.0, min(1.0, 1.0 - p_le2))
+
+def predict_goals(home_xg, away_xg, btts_prob, o25_prob):
+    """
+    Combina xG (base) + BTTS (distribuição) para prever golos.
+    Algoritmo:
+      1. BTTS alto → pull suave do xG total para floor 2.2 (ambas marcam)
+      2. Sinal xG → O2.5 via Poisson(lambda=xg_ajustado)
+      3. Combinação: O25 modelo (55%) + Poisson xG (45%)
+      4. Veredito baseado nos thresholds combinados
+    """
+    try:
+        xgt = float(home_xg or 0) + float(away_xg or 0)
+        bp  = float(btts_prob or 0)
+        op  = float(o25_prob or 0)
+    except (TypeError, ValueError):
+        return None
+    if xgt <= 0:
+        return None
+
+    # Ajuste BTTS: se prob > 55%, pull suave para floor 2.2 (escala 0→1 entre 55% e 95%)
+    if bp >= 0.55:
+        pull = min((bp - 0.55) / 0.40, 1.0)
+        adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
+    else:
+        adj = xgt
+
+    # P(Over 2.5) via Poisson — modelo calibrado vs escala linear
+    xg_poisson = _poisson_over2(adj)
+
+    # Combinação: modelo O25 é sinal primário (55%), xG Poisson confirma (45%)
+    o25c = round(op * 0.55 + xg_poisson * 0.45, 3)
+
+    low  = max(0, int(adj))
+    high = low + 1
+
+    if o25c >= 0.60 and bp >= 0.60:
+        verdict, vcol = "Over 2.5 + BTTS",   "#4ade80"
+    elif o25c >= 0.60:
+        verdict, vcol = "Over 2.5 provável",  "#4ade80"
+    elif bp >= 0.65:
+        verdict, vcol = "BTTS provável",       "#fbbf24"
+    elif o25c <= 0.38:
+        verdict, vcol = "Under 2.5 provável", "#f87171"
+    else:
+        verdict, vcol = "Inconclusivo",        "#4a5568"
+
+    return {
+        "xgt":     round(xgt, 2),
+        "adj":     round(adj, 2),
+        "range":   f"{low}-{high}",
+        "o25":     o25c,
+        "btts":    round(bp, 3),
+        "verdict": verdict,
+        "vcol":    vcol,
+    }
+
 def confidence_badge(conf):
     if conf is None:
         return ("MÉDIA", "#f59e0b", "#2a1f00")
@@ -224,6 +287,23 @@ def match_card_html(enriched):
     bt_class  = "extra-pill hot-green" if bt  >= 0.61 else "extra-pill"
     xg_class  = "extra-pill hot-blue"  if xg_total >= 2.5 else "extra-pill"
 
+    gp = predict_goals(xg_h if xg_h != "–" else None,
+                       xg_a if xg_a != "–" else None, bt, o25)
+    if gp:
+        bar_w = int(gp["o25"] * 100)
+        bar_col = gp["vcol"]
+        goal_html = (
+            f'<div class="gp-row">'
+            f'<span class="gp-lbl">🎯 Golos</span>'
+            f'<span class="gp-range">{gp["range"]}</span>'
+            f'<div class="gp-bar-bg"><div class="gp-bar-fill" style="width:{bar_w}%;background:{bar_col}"></div></div>'
+            f'<span class="gp-pct" style="color:{bar_col}">{bar_w}%</span>'
+            f'<span class="gp-verdict" style="color:{bar_col}">{gp["verdict"]}</span>'
+            f'</div>'
+        )
+    else:
+        goal_html = ""
+
     ko_display = "🔴 LIVE" if is_live else ("✅ Final" if is_finished else f"🕐 {ko}")
 
     return f'''
@@ -264,6 +344,7 @@ def match_card_html(enriched):
           <div class="{bt_class}">🔁 BTTS <span>{int(bt*100)}%</span></div>
           <div class="{xg_class}">📊 xG <span>{xg_h}–{xg_a}</span></div>
         </div>
+        {goal_html}
       </div>
     </div>'''
 
@@ -556,6 +637,19 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
 .tb-pick-mkt{{color:var(--sub)}}
 .tb-pick-odds{{color:var(--muted)}}
 
+/* GOAL PREDICTION */
+.gp-row{{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:8px;padding:7px 10px;
+  background:#0a0f1a;border:1px solid #1e3050;border-radius:8px
+}}
+.gp-lbl{{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}}
+.gp-range{{font-size:.85rem;font-weight:800;color:var(--text);flex-shrink:0;min-width:28px}}
+.gp-bar-bg{{flex:1;height:6px;background:var(--border);border-radius:3px;min-width:40px}}
+.gp-bar-fill{{height:100%;border-radius:3px;transition:width .4s}}
+.gp-pct{{font-size:.72rem;font-weight:700;flex-shrink:0;min-width:30px;text-align:right}}
+.gp-verdict{{font-size:.72rem;font-weight:600;flex-shrink:0}}
+
 /* FOOTER */
 .tabs{{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}}
 .tab{{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}}
@@ -759,12 +853,14 @@ def send_telegram(enriched_list):
             continue
         conf_lbl = "ALTA" if conf_f >= 0.65 else "MÉDIA"
         m = e["match"]
+        gp = predict_goals(hx, ax, pred.get("btts_yes") or 0, pred.get("over_2_5") or 0)
         xg_candidates.append({
             "xgt":    xgt,
             "conf":   conf_lbl,
             "league": m.get("_league_name", ""),
             "home":   m.get("home_team", "?"),
             "away":   m.get("away_team", "?"),
+            "gp":     gp,
         })
 
     xg_candidates.sort(key=lambda x: -x["xgt"])
@@ -772,9 +868,12 @@ def send_telegram(enriched_list):
         xg_lines = []
         for c in xg_candidates[:5]:
             flag = league_flag(c["league"])
+            gp   = c["gp"]
+            verd = f" · _{gp['verdict']}_" if gp else ""
+            rng  = f" · {gp['range']} golos" if gp else ""
             xg_lines.append(
                 f"{flag} *{c['home']} vs {c['away']}*\n"
-                f"   xG total: *{c['xgt']}* · _{c['conf']}_"
+                f"   xG: *{c['xgt']}*{rng}{verd}"
             )
         blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
     else:
