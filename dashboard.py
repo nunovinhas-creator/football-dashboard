@@ -4,6 +4,8 @@ Matemática Da Bola — BSD API v2 (fixed)
 
 import os
 import json
+import math
+import time
 import requests
 from datetime import datetime, timezone, timedelta
 
@@ -24,12 +26,6 @@ def get(path, params=None):
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-def fmt_pct(v):
-    if v is None:
-        return "–"
-    return f"{round(float(v) * 100)}%"
-
-# FIX BUG 4: parse seguro de datas ISO com ou sem Z/offset
 def parse_dt(s):
     if not s:
         return None
@@ -63,21 +59,6 @@ def fetch_odds(event_id):
         return get(f"/events/{event_id}/odds/comparison/")
     except Exception:
         return None
-
-# FIX BUG 1: fetch_prediction estava em falta
-def fetch_prediction(event_id):
-    try:
-        data = get("/predictions/", {"event_id": event_id, "limit": 1})
-        results = data.get("results", [])
-        return results[0] if results else None
-    except Exception:
-        return None
-
-def enrich(match):
-    eid  = match["id"]
-    pred = fetch_prediction(eid)
-    odds = fetch_odds(eid)
-    return {"match": match, "pred": pred, "odds": odds}
 
 def detect_value(pred, odds):
     if not pred or not odds:
@@ -136,8 +117,6 @@ def league_flag(name):
     return "⚽"
 
 def _poisson_over2(lam):
-    """P(X > 2) para distribuição Poisson(lambda) — sem imports externos."""
-    import math
     if lam <= 0:
         return 0.0
     p_le2 = math.exp(-lam) * (1.0 + lam + lam**2 / 2.0)
@@ -246,7 +225,7 @@ def match_card_html(enriched):
     xg_a = pred.get("away_xg") or "–"
     score_pred = pred.get("most_likely_score") or "–"
     try:    xg_total = round(float(xg_h) + float(xg_a), 2)
-    except: xg_total = 0
+    except (TypeError, ValueError): xg_total = 0
 
     conf_label, _, _ = confidence_badge(conf)
     tip  = tip_label(hw, dr, aw, o25, conf)
@@ -632,6 +611,7 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
   padding:6px 0;border-bottom:1px solid #1a2540;font-size:.78rem;flex-wrap:wrap
 }}
 .tb-pick:last-child{{border-bottom:none}}
+.tb-pick-num{{width:18px;height:18px;border-radius:50%;background:#1e3a5f;color:#60a5fa;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}}
 .tb-pick-league{{color:var(--muted);min-width:120px;font-size:.68rem}}
 .tb-pick-teams{{flex:1;font-weight:600;color:var(--text);min-width:140px}}
 .tb-pick-mkt{{color:var(--sub)}}
@@ -809,6 +789,12 @@ function resetFilters() {{
 </body>
 </html>'''
 
+def escape_md(s):
+    """Escapa caracteres especiais do Markdown v1 do Telegram em valores dinâmicos."""
+    for ch in ('_', '*', '`', '['):
+        s = str(s).replace(ch, f'\\{ch}')
+    return s
+
 # ── Telegram ──────────────────────────────────────────────────────────────────
 def send_telegram(enriched_list):
     today  = today_str()
@@ -831,7 +817,7 @@ def send_telegram(enriched_list):
             odds = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
             flag = league_flag(pk["league"])
             picks_lines.append(
-                f"`{i}` {flag} *{pk['home']} vs {pk['away']}*\n"
+                f"`{i}` {flag} *{escape_md(pk['home'])} vs {escape_md(pk['away'])}*\n"
                 f"   {mkt} · {int(pk['prob']*100)}% · _{conf}_{odds}"
             )
         combined = f"\n💰 Odds combinadas: *{treble['combined_odds']:.2f}*" if treble.get("combined_odds") else ""
@@ -878,7 +864,7 @@ def send_telegram(enriched_list):
             verd = f" · _{gp['verdict']}_" if gp else ""
             rng  = f" · {gp['range']} golos" if gp else ""
             xg_lines.append(
-                f"{flag} *{c['home']} vs {c['away']}*\n"
+                f"{flag} *{escape_md(c['home'])} vs {escape_md(c['away'])}*\n"
                 f"   xG: *{c['xgt']}*{rng}{verd}"
             )
         blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
@@ -915,7 +901,7 @@ def send_telegram(enriched_list):
             flag = league_flag(v["league"])
             mkt  = "🔁 BTTS" if v["market"] == "BTTS" else "📈 Over 2.5"
             val_lines.append(
-                f"{flag} *{v['home']} vs {v['away']}*\n"
+                f"{flag} *{escape_md(v['home'])} vs {escape_md(v['away'])}*\n"
                 f"   {mkt} · ML {v['ml_prob']*100:.0f}% · Pinnacle @{v['pin_odds']:.2f} · edge *+{v['edge']*100:.1f}%*"
             )
         blocks.append("💎 *VALUE EDGE ALTO (>7%, ALTA)*\n" + "\n\n".join(val_lines))
@@ -987,6 +973,7 @@ def main():
         }
 
         odds = fetch_odds(eid)
+        time.sleep(0.2)
         home = m.get("home_team", "?")
         away = m.get("away_team", "?")
         league = m.get("_league_name", "")

@@ -6,6 +6,8 @@ Modo SCORE (00:00 UTC + sempre): cruza predições com resultados; pontua tripla
 
 import os
 import json
+import math
+import time
 import smtplib
 import requests
 from email.mime.multipart import MIMEMultipart
@@ -32,9 +34,6 @@ def get(path, params=None):
 
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-def yesterday_str():
-    return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
 
 def parse_dt(s):
     if not s:
@@ -107,6 +106,7 @@ def fetch_todays_predictions():
                     eid = r.get("event", {}).get("id")
                     if eid:
                         r["_pinnacle_odds"] = fetch_pinnacle_odds(eid)
+                        time.sleep(0.2)
                     all_preds.append(r)
             if not data.get("next"):
                 break
@@ -182,7 +182,6 @@ def make_record(pred, result):
     date_str = dt.strftime("%Y-%m-%d") if dt else event_date[:10]
 
     # Previsão de golos: xG (base) + BTTS (ajuste de distribuição) + Poisson O25
-    import math as _math
     bp_frac = pb / 100
     op_frac = po / 100
     if bp_frac >= 0.55:
@@ -191,7 +190,7 @@ def make_record(pred, result):
     else:
         gp_adj = xgt
     # P(Over 2.5) via Poisson(lambda=gp_adj)
-    _p_le2    = _math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+    _p_le2    = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
     xg_poiss  = max(0.0, min(1.0, 1.0 - _p_le2))
     o25_comb  = round(op_frac * 0.55 + xg_poiss * 0.45, 3)
     gp_low    = max(0, int(gp_adj))
@@ -243,7 +242,6 @@ def migrate_picks(records):
         r["pick_btts"] = pb >= 61 and conf in ("ALTA", "MÉDIA")
         r["pick_xg"]   = xgt >= 2.8
         # Previsão de golos xG+BTTS+Poisson
-        import math as _m
         bp_f = pb / 100
         op_f = r.get("po", 0) / 100
         if bp_f >= 0.55:
@@ -251,7 +249,7 @@ def migrate_picks(records):
             gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
         else:
             gp_adj = xgt
-        _p2   = _m.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+        _p2   = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
         xgp   = max(0.0, min(1.0, 1.0 - _p2))
         o25c  = round(op_f * 0.55 + xgp * 0.45, 3)
         gp_low = max(0, int(gp_adj))
@@ -363,15 +361,18 @@ def build_daily_treble(preds):
 
 def score_treble(treble, records_for_date):
     """Pontua uma tripla pendente usando os registos reais do dia."""
-    by_match = {}
+    by_event = {r["event_id"]: r for r in records_for_date if r.get("event_id")}
+    by_match  = {}
     for r in records_for_date:
         key = (r.get("league", ""), r.get("home", ""), r.get("away", ""))
         by_match[key] = r
 
     results = []
     for pick in treble["picks"]:
-        key = (pick["league"], pick["home"], pick["away"])
-        rec = by_match.get(key)
+        rec = by_event.get(pick.get("event_id"))
+        if not rec:  # fallback por nome (retrocompatibilidade com picks antigos)
+            key = (pick["league"], pick["home"], pick["away"])
+            rec = by_match.get(key)
         if not rec:
             return None  # resultado ainda não disponível
         market = pick["market"]
@@ -403,6 +404,46 @@ def score_treble(treble, records_for_date):
         "hit":           won,
         "profit_1u":     profit,
     }
+
+def cleanup_old_preds(days_to_keep=60):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).strftime("%Y-%m-%d")
+    removed = 0
+    for fname in sorted(os.listdir("docs")):
+        if not (fname.startswith("preds_") and fname.endswith(".json")):
+            continue
+        date_str = fname.replace("preds_", "").replace(".json", "")
+        if date_str < cutoff:
+            try:
+                os.remove(os.path.join("docs", fname))
+                removed += 1
+            except Exception as e:
+                print(f"[WARN] cleanup: não foi possível remover {fname}: {e}")
+    if removed:
+        print(f"[backtest] cleanup: {removed} snapshots antigos removidos (>{days_to_keep} dias)")
+
+def cleanup_stuck_trebles(trebles, max_days=3):
+    today_dt   = datetime.now(timezone.utc)
+    still_pending = []
+    for treble in trebles.get("pending", []):
+        t_date = treble.get("date", "")
+        try:
+            t_dt     = datetime.fromisoformat(t_date + "T00:00:00+00:00")
+            days_old = (today_dt - t_dt).days
+        except Exception:
+            days_old = 0
+        if days_old > max_days:
+            print(f"[backtest] Tripla {t_date} há {days_old} dias pendente — expirada (−1u)")
+            trebles.setdefault("history", []).append({
+                **treble,
+                "status":       "scored",
+                "hit":          False,
+                "profit_1u":    -1.0,
+                "pick_results": [False] * len(treble.get("picks", [])),
+            })
+        else:
+            still_pending.append(treble)
+    trebles["pending"] = still_pending
+    return trebles
 
 # ── Stats e HTML ──────────────────────────────────────────────────────────────
 
@@ -1152,17 +1193,33 @@ def main():
     history["records"] = migrate_picks(history.get("records", []))
 
     # ── MODO SAVE ────────────────────────────────────────────────────────────
-    save_file = preds_file(today)
-    if not os.path.exists(save_file):
+    save_file   = preds_file(today)
+    preds_saved = []
+    if os.path.exists(save_file):
+        try:
+            with open(save_file, encoding="utf-8") as f:
+                preds_saved = json.load(f)
+        except Exception:
+            pass
+
+    if not preds_saved:
         print(f"[backtest] SAVE: a guardar predições de {today}...")
-        preds = fetch_todays_predictions()
-        print(f"[backtest] {len(preds)} predições para {today}")
-        if preds:
+        preds_fresh = fetch_todays_predictions()
+        print(f"[backtest] {len(preds_fresh)} predições para {today}")
+        if preds_fresh:
             with open(save_file, "w", encoding="utf-8") as f:
-                json.dump(preds, f, ensure_ascii=False, separators=(",", ":"))
+                json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
             print(f"[backtest] {save_file} guardado ✓")
     else:
-        print(f"[backtest] SAVE: {save_file} já existe — a saltar")
+        print(f"[backtest] SAVE: {save_file} existe ({len(preds_saved)}) — a verificar novos jogos...")
+        preds_fresh = fetch_todays_predictions()
+        if len(preds_fresh) > len(preds_saved):
+            print(f"[backtest] +{len(preds_fresh) - len(preds_saved)} jogos novos — a actualizar {save_file}")
+            with open(save_file, "w", encoding="utf-8") as f:
+                json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
+            print(f"[backtest] {save_file} actualizado ✓")
+        else:
+            print(f"[backtest] SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
 
     # Tentar construir tripla do dia (da preds file actual ou existente)
     today_built = any(
@@ -1250,6 +1307,9 @@ def main():
     if new_records_total > 0:
         print(f"[backtest] Total acumulado: {len(history['records'])} jogos")
 
+    # Expirar triplas que ficaram presas em pending há mais de 3 dias
+    trebles = cleanup_stuck_trebles(trebles)
+
     # Pontuar triplas pendentes cujas datas já foram processadas
     still_pending = []
     for treble in trebles.get("pending", []):
@@ -1275,6 +1335,8 @@ def main():
     with open("docs/backtest.html", "w", encoding="utf-8") as f:
         f.write(html)
     print("[backtest] docs/backtest.html gerado ✓")
+
+    cleanup_old_preds()
 
     # Relatório diário às 07:00 UTC, ou forçado em workflow_dispatch
     if datetime.now(timezone.utc).hour == 7 or os.environ.get("FORCE_EMAIL"):
