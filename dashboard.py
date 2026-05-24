@@ -814,6 +814,12 @@ def send_telegram(enriched_list):
     today  = today_str()
     blocks = []
 
+    # Filtrar só jogos de hoje — a API devolve previsões de vários dias
+    enriched_list = [
+        e for e in enriched_list
+        if e["match"].get("event_date", "")[:10] == today
+    ]
+
     # ── 1. Tripla do dia ──────────────────────────────────────────────────────
     treble  = load_todays_treble()
     mkt_map = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
@@ -1002,7 +1008,9 @@ def main():
     # 3. Ordenar por hora de kickoff
     enriched_list.sort(key=lambda e: e["match"].get("event_date", ""))
 
-    print(f"[dashboard] {len(enriched_list)} jogos com predicao")
+    today_count = sum(1 for e in enriched_list if e["match"].get("event_date","")[:10] == today)
+    other_count = len(enriched_list) - today_count
+    print(f"[dashboard] {len(enriched_list)} jogos com predicao ({today_count} hoje, {other_count} outros dias)")
 
     html = build_html(enriched_list)
     os.makedirs("docs", exist_ok=True)
