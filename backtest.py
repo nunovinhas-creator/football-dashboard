@@ -848,15 +848,18 @@ def rc(rate):
 def treble_roi(trebles_history):
     hist = [t for t in trebles_history if t.get("status") == "scored"]
     if not hist:
-        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,"roi_pct":None,"has_odds":False}
+        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,
+                "roi_pct":None,"profit_u":None,"avg_odds":None,"has_odds":False}
     total  = len(hist)
     won    = sum(1 for t in hist if t.get("hit"))
-    # apenas inclui no ROI financeiro as triplas onde as odds foram guardadas
     with_odds = [t for t in hist if t.get("combined_odds")]
     has_odds  = bool(with_odds)
     staked    = float(len(with_odds))
     returned  = sum(t["combined_odds"] for t in with_odds if t.get("hit"))
     roi_pct   = round((returned - staked) / staked * 100, 1) if staked else None
+    profit_u  = round(returned - staked, 2) if staked else None
+    odds_list = [t["combined_odds"] for t in with_odds]
+    avg_odds  = round(sum(odds_list) / len(odds_list), 2) if odds_list else None
     return {
         "total":    total,
         "won":      won,
@@ -864,6 +867,8 @@ def treble_roi(trebles_history):
         "staked":   staked,
         "returned": round(returned, 2),
         "roi_pct":  roi_pct,
+        "profit_u": profit_u,
+        "avg_odds": avg_odds,
         "has_odds": has_odds,
     }
 
@@ -918,18 +923,28 @@ def treble_section_html(trebles_data):
 
     # ROI summary
     if roi["roi_pct"] is not None:
-        roi_col  = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
-        roi_str  = f'{"+" if roi["roi_pct"]>=0 else ""}{roi["roi_pct"]}%'
+        roi_col   = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
+        sign      = "+" if roi["profit_u"] >= 0 else ""
+        roi_str   = f'{sign}{roi["profit_u"]:.2f}u'
+        roi_sub   = f'({sign}{roi["roi_pct"]}%)'
     else:
         roi_col  = "#94a3b8"
         roi_str  = "N/D"
+        roi_sub  = "(sem odds)"
+    avg_odds_str = f'{roi["avg_odds"]:.2f}x' if roi["avg_odds"] else "N/D"
+    avg_col      = "#60a5fa" if roi["avg_odds"] else "#4a5568"
     roi_html = (
         f'<div class="tb-roi">'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["total"]}</div><div class="tb-roi-l">Triplas</div></div>'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["won"]}</div><div class="tb-roi-l">Ganhas</div></div>'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["rate"]}%</div><div class="tb-roi-l">Hit Rate</div></div>'
-        f'<div class="tb-roi-item"><div class="tb-roi-n" style="color:{roi_col}">{roi_str}</div>'
-        f'<div class="tb-roi-l">ROI{" (sem odds)" if not roi["has_odds"] else ""}</div></div>'
+        f'<div class="tb-roi-item">'
+        f'<div class="tb-roi-n" style="color:{roi_col}">{roi_str}</div>'
+        f'<div class="tb-roi-sub" style="color:{roi_col}">{roi_sub}</div>'
+        f'<div class="tb-roi-l">ROI</div></div>'
+        f'<div class="tb-roi-item">'
+        f'<div class="tb-roi-n" style="color:{avg_col}">{avg_odds_str}</div>'
+        f'<div class="tb-roi-l">Odds médias</div></div>'
         f'</div>'
     )
 
@@ -992,10 +1007,11 @@ def treble_section_html(trebles_data):
         '.tb-note{font-size:.68rem;color:var(--muted);margin-top:10px;font-style:italic}'
         '.tb-empty{color:var(--muted);font-style:italic;font-size:.82rem;padding:10px 0}'
         '.tb-roi{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}'
-        '.tb-roi-item{flex:1;padding:14px;text-align:center;border-right:1px solid var(--border)}'
+        '.tb-roi-item{flex:1;padding:12px 8px;text-align:center;border-right:1px solid var(--border)}'
         '.tb-roi-item:last-child{border-right:none}'
-        '.tb-roi-n{font-size:1.4rem;font-weight:800;line-height:1}'
-        '.tb-roi-l{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px}'
+        '.tb-roi-n{font-size:1.3rem;font-weight:800;line-height:1}'
+        '.tb-roi-sub{font-size:.72rem;font-weight:600;margin-top:2px}'
+        '.tb-roi-l{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}'
     )
 
     return css_extra, (
@@ -1699,10 +1715,12 @@ def _email_html(history, trebles):  # noqa: C901
     # ── 6. Triplas — ROI + histórico ─────────────────────────────────────────
     roi_col = rate_col(roi["rate"]) if roi["total"] > 0 else "#94a3b8"
     if roi["roi_pct"] is not None:
-        roi_str = ("+" if roi["roi_pct"] >= 0 else "") + str(roi["roi_pct"]) + "%"
+        sign      = "+" if roi["profit_u"] >= 0 else ""
+        roi_str   = f'{sign}{roi["profit_u"]:.2f}u ({sign}{roi["roi_pct"]}%)'
         roi_label = "ROI"
     else:
         roi_str, roi_label = "N/D", "ROI (sem odds)"
+    avg_odds_str = f'{roi["avg_odds"]:.2f}x' if roi["avg_odds"] else "N/D"
 
     treble_roi_section = (
         section_title("💰 Triplas — ROI Acumulado")
@@ -1712,10 +1730,11 @@ def _email_html(history, trebles):  # noqa: C901
         + small_card(str(roi["total"]), "Triplas")
         + small_card(str(roi["won"]), "Ganhas")
         + small_card(str(roi["rate"]) + "%", "Hit Rate", roi_col)
-        + f'<td style="text-align:center;padding:12px 8px">'
-        f'<div style="font-size:18px;font-weight:800;color:{roi_col}">{roi_str}</div>'
+        + f'<td style="text-align:center;padding:12px 8px;border-right:1px solid #e2e8f0">'
+        f'<div style="font-size:15px;font-weight:800;color:{roi_col}">{roi_str}</div>'
         f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;'
         f'letter-spacing:0.4px;margin-top:3px">{roi_label}</div></td>'
+        + small_card(avg_odds_str, "Odds médias", "#1e40af")
         + f'</tr></tbody></table>'
     )
 
