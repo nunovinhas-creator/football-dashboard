@@ -6,6 +6,8 @@ Modo SCORE (00:00 UTC + sempre): cruza predições com resultados; pontua tripla
 
 import os
 import json
+import math
+import time
 import smtplib
 import requests
 from email.mime.multipart import MIMEMultipart
@@ -33,9 +35,6 @@ def get(path, params=None):
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-def yesterday_str():
-    return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
-
 def parse_dt(s):
     if not s:
         return None
@@ -46,6 +45,15 @@ def parse_dt(s):
 
 def preds_file(date_str):
     return f"docs/preds_{date_str}.json"
+
+def wilson_ci(hits, n, z=1.96):
+    """Intervalo de confiança Wilson 95% para proporções."""
+    if n == 0:
+        return 0.0, 100.0
+    p = hits / n
+    center = (p + z*z/(2*n)) / (1 + z*z/n)
+    half   = z * math.sqrt(p*(1-p)/n + z*z/(4*n*n)) / (1 + z*z/n)
+    return max(0.0, round((center - half)*100, 1)), min(100.0, round((center + half)*100, 1))
 
 # ── Persistência ──────────────────────────────────────────────────────────────
 
@@ -60,8 +68,10 @@ def load_history():
 
 def save_history(h):
     os.makedirs("docs", exist_ok=True)
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+    tmp = HISTORY_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(h, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, HISTORY_FILE)
 
 def load_trebles():
     if os.path.exists(TREBLES_FILE):
@@ -74,8 +84,10 @@ def load_trebles():
 
 def save_trebles(t):
     os.makedirs("docs", exist_ok=True)
-    with open(TREBLES_FILE, "w", encoding="utf-8") as f:
+    tmp = TREBLES_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(t, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, TREBLES_FILE)
 
 # ── API ───────────────────────────────────────────────────────────────────────
 
@@ -107,6 +119,7 @@ def fetch_todays_predictions():
                     eid = r.get("event", {}).get("id")
                     if eid:
                         r["_pinnacle_odds"] = fetch_pinnacle_odds(eid)
+                        time.sleep(0.2)
                     all_preds.append(r)
             if not data.get("next"):
                 break
@@ -182,7 +195,6 @@ def make_record(pred, result):
     date_str = dt.strftime("%Y-%m-%d") if dt else event_date[:10]
 
     # Previsão de golos: xG (base) + BTTS (ajuste de distribuição) + Poisson O25
-    import math as _math
     bp_frac = pb / 100
     op_frac = po / 100
     if bp_frac >= 0.55:
@@ -191,7 +203,7 @@ def make_record(pred, result):
     else:
         gp_adj = xgt
     # P(Over 2.5) via Poisson(lambda=gp_adj)
-    _p_le2    = _math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+    _p_le2    = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
     xg_poiss  = max(0.0, min(1.0, 1.0 - _p_le2))
     o25_comb  = round(op_frac * 0.55 + xg_poiss * 0.45, 3)
     gp_low    = max(0, int(gp_adj))
@@ -243,7 +255,6 @@ def migrate_picks(records):
         r["pick_btts"] = pb >= 61 and conf in ("ALTA", "MÉDIA")
         r["pick_xg"]   = xgt >= 2.8
         # Previsão de golos xG+BTTS+Poisson
-        import math as _m
         bp_f = pb / 100
         op_f = r.get("po", 0) / 100
         if bp_f >= 0.55:
@@ -251,7 +262,7 @@ def migrate_picks(records):
             gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
         else:
             gp_adj = xgt
-        _p2   = _m.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+        _p2   = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
         xgp   = max(0.0, min(1.0, 1.0 - _p2))
         o25c  = round(op_f * 0.55 + xgp * 0.45, 3)
         gp_low = max(0, int(gp_adj))
@@ -347,8 +358,23 @@ def build_daily_treble(preds):
             seen[c["league"]] = c
     unique = list(seen.values())
 
+    btts_c = sum(1 for c in candidates if c["market"] == "BTTS")
+    x12_c  = sum(1 for c in candidates if c["market"].startswith("1X2"))
+
     if len(unique) < 3:
-        return None
+        found = [dict(c) for c in sorted(unique, key=lambda x: (x["priority"], -x["prob"]))]
+        for c in found:
+            c.pop("priority", None)
+        return {
+            "date":          today,
+            "status":        "no_picks",
+            "btts_count":    btts_c,
+            "x12_count":     x12_c,
+            "unique_count":  len(unique),
+            "found_picks":   found,
+            "picks":         [],
+            "combined_odds": None,
+        }
 
     picks = sorted(unique, key=lambda x: (x["priority"], -x["prob"]))[:3]
     for p in picks:
@@ -363,15 +389,18 @@ def build_daily_treble(preds):
 
 def score_treble(treble, records_for_date):
     """Pontua uma tripla pendente usando os registos reais do dia."""
-    by_match = {}
+    by_event = {r["event_id"]: r for r in records_for_date if r.get("event_id")}
+    by_match  = {}
     for r in records_for_date:
         key = (r.get("league", ""), r.get("home", ""), r.get("away", ""))
         by_match[key] = r
 
     results = []
     for pick in treble["picks"]:
-        key = (pick["league"], pick["home"], pick["away"])
-        rec = by_match.get(key)
+        rec = by_event.get(pick.get("event_id"))
+        if not rec:  # fallback por nome (retrocompatibilidade com picks antigos)
+            key = (pick["league"], pick["home"], pick["away"])
+            rec = by_match.get(key)
         if not rec:
             return None  # resultado ainda não disponível
         market = pick["market"]
@@ -404,14 +433,61 @@ def score_treble(treble, records_for_date):
         "profit_1u":     profit,
     }
 
+def cleanup_old_preds(days_to_keep=60):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).strftime("%Y-%m-%d")
+    removed = 0
+    for fname in sorted(os.listdir("docs")):
+        if not (fname.startswith("preds_") and fname.endswith(".json")):
+            continue
+        date_str = fname.replace("preds_", "").replace(".json", "")
+        if date_str < cutoff:
+            try:
+                os.remove(os.path.join("docs", fname))
+                removed += 1
+            except Exception as e:
+                print(f"[WARN] cleanup: não foi possível remover {fname}: {e}")
+    if removed:
+        print(f"[backtest] cleanup: {removed} snapshots antigos removidos (>{days_to_keep} dias)")
+
+def cleanup_stuck_trebles(trebles, max_days=3):
+    today_dt   = datetime.now(timezone.utc)
+    still_pending = []
+    for treble in trebles.get("pending", []):
+        t_date = treble.get("date", "")
+        try:
+            t_dt     = datetime.fromisoformat(t_date + "T00:00:00+00:00")
+            days_old = (today_dt - t_dt).days
+        except Exception:
+            days_old = 0
+        if days_old > max_days:
+            print(f"[backtest] Tripla {t_date} há {days_old} dias pendente — expirada (−1u)")
+            trebles.setdefault("history", []).append({
+                **treble,
+                "status":       "scored",
+                "hit":          False,
+                "profit_1u":    -1.0,
+                "pick_results": [False] * len(treble.get("picks", [])),
+            })
+        else:
+            still_pending.append(treble)
+    trebles["pending"] = still_pending
+    return trebles
+
 # ── Stats e HTML ──────────────────────────────────────────────────────────────
 
 def calc_stats(records, pick_key, hit_key, label):
     subset = [r for r in records if r.get(pick_key)]
     if not subset:
-        return {"label": label, "picks": 0, "hits": 0, "rate": 0.0, "by_conf": {}, "trend": []}
-    hits = sum(1 for r in subset if r.get(hit_key))
-    rate = round(hits / len(subset) * 100, 1)
+        return {"label": label, "picks": 0, "hits": 0, "rate": 0.0,
+                "ci_lo": 0.0, "ci_hi": 100.0, "rolling_30": None, "rolling_30_n": 0,
+                "by_conf": {}, "trend": []}
+    hits   = sum(1 for r in subset if r.get(hit_key))
+    rate   = round(hits / len(subset) * 100, 1)
+    ci_lo, ci_hi = wilson_ci(hits, len(subset))
+    cutoff_30  = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+    recent     = [r for r in subset if (r.get("date") or "") >= cutoff_30]
+    r_hits     = sum(1 for r in recent if r.get(hit_key))
+    rolling_30 = round(r_hits / len(recent) * 100, 1) if recent else None
     by_conf = {}
     for c in ["ALTA", "MÉDIA", "BAIXA"]:
         sub = [r for r in subset if r["conf"] == c]
@@ -430,7 +506,10 @@ def calc_stats(records, pick_key, hit_key, label):
             pass
     trend = [{"w":wk,"rate":round(v["h"]/v["p"]*100,1),"p":v["p"]}
              for wk,v in sorted(weekly.items())[-8:] if v["p"]>=3]
-    return {"label":label,"picks":len(subset),"hits":hits,"rate":rate,"by_conf":by_conf,"trend":trend}
+    return {"label": label, "picks": len(subset), "hits": hits, "rate": rate,
+            "ci_lo": ci_lo, "ci_hi": ci_hi,
+            "rolling_30": rolling_30, "rolling_30_n": len(recent),
+            "by_conf": by_conf, "trend": trend}
 
 def calc_xg(records):
     s = [r for r in records if r.get("pick_xg") and r.get("xg",0)>0]
@@ -441,6 +520,78 @@ def calc_xg(records):
         "avg_goals": round(sum(r["goals"] for r in s)/len(s),2),
         "over_rate": round(sum(1 for r in s if r["goals"]>r["xg"])/len(s)*100,1),
     }
+
+def calc_calibration(records, prob_key, hit_key, min_n=2):
+    """
+    Agrupa predições em buckets de probabilidade ML e calcula hit rate real.
+    Revela se o modelo está bem calibrado: quando diz 70%, acontece 70%?
+    """
+    buckets_defs = [(45, 55), (55, 61), (61, 65), (65, 70), (70, 80), (80, 101)]
+    result = []
+    for lo, hi in buckets_defs:
+        subset = [r for r in records if lo <= r.get(prob_key, 0) < hi]
+        if len(subset) < min_n:
+            continue
+        hits = sum(1 for r in subset if r.get(hit_key))
+        ci_lo, ci_hi = wilson_ci(hits, len(subset))
+        result.append({
+            "label":     f"{lo}–{min(hi, 100)}%",
+            "n":         len(subset),
+            "predicted": (lo + min(hi, 100)) / 2,
+            "actual":    round(hits / len(subset) * 100, 1),
+            "ci_lo":     ci_lo,
+            "ci_hi":     ci_hi,
+        })
+    return result
+
+def _calibration_svg(calib_data):
+    """SVG de barras: hit rate real vs previsão ML por bucket. IC 95% Wilson incluído."""
+    if not calib_data:
+        return ""
+    W, H   = 460, 220
+    ML, MR, MT, MB = 52, 20, 28, 48
+    pw, ph = W - ML - MR, H - MT - MB
+    n      = len(calib_data)
+    slot   = pw / n
+    bw     = slot * 0.55
+
+    def sy(pct): return MT + ph - pct / 100 * ph
+
+    out = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="display:block;max-width:{W}px">']
+    for pct in [50, 65, 80]:
+        y = sy(pct)
+        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1" stroke-dasharray="4,3"/>')
+        out.append(f'<text x="{ML-5}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{pct}%</text>')
+    out.append(f'<line x1="{ML}" y1="{MT}" x2="{ML}" y2="{MT+ph}" stroke="#2d3748" stroke-width="1"/>')
+    if n >= 2:
+        x0 = ML + slot * 0.5
+        x1 = ML + slot * (n - 0.5)
+        y0 = sy(calib_data[0]["predicted"])
+        y1 = sy(calib_data[-1]["predicted"])
+        out.append(f'<line x1="{x0:.0f}" y1="{y0:.0f}" x2="{x1:.0f}" y2="{y1:.0f}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
+    for i, d in enumerate(calib_data):
+        cx  = ML + slot * (i + 0.5)
+        bh  = max(2, d["actual"] / 100 * ph)
+        by  = MT + ph - bh
+        col = "#4ade80" if d["actual"] >= d["predicted"] else "#f87171"
+        out.append(f'<rect x="{cx - bw/2:.0f}" y="{by:.0f}" width="{bw:.0f}" height="{bh:.0f}" fill="{col}" opacity="0.75" rx="2"/>')
+        ci_lo_y = sy(d["ci_lo"])
+        ci_hi_y = sy(d["ci_hi"])
+        out.append(f'<line x1="{cx:.0f}" y1="{ci_lo_y:.0f}" x2="{cx:.0f}" y2="{ci_hi_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_lo_y:.0f}" x2="{cx+4:.0f}" y2="{ci_lo_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_hi_y:.0f}" x2="{cx+4:.0f}" y2="{ci_hi_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<circle cx="{cx:.0f}" cy="{sy(d["actual"]):.0f}" r="3.5" fill="{col}"/>')
+        out.append(f'<text x="{cx:.0f}" y="{by-5:.0f}" fill="{col}" font-size="9" text-anchor="middle" font-weight="700">{d["actual"]:.0f}%</text>')
+        out.append(f'<text x="{cx:.0f}" y="{MT+ph+14}" fill="#4a5568" font-size="9" text-anchor="middle">{d["label"]}</text>')
+        out.append(f'<text x="{cx:.0f}" y="{MT+ph+26}" fill="#4a5568" font-size="9" text-anchor="middle">n={d["n"]}</text>')
+    out.append(f'<circle cx="{ML+4}" cy="{MT+8}" r="4" fill="#4ade80" opacity="0.8"/>')
+    out.append(f'<text x="{ML+12}" y="{MT+12}" fill="#4ade80" font-size="9">Acima do previsto</text>')
+    out.append(f'<circle cx="{ML+110}" cy="{MT+8}" r="4" fill="#f87171" opacity="0.8"/>')
+    out.append(f'<text x="{ML+118}" y="{MT+12}" fill="#f87171" font-size="9">Abaixo do previsto</text>')
+    out.append(f'<line x1="{ML+210}" y1="{MT+8}" x2="{ML+226}" y2="{MT+8}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
+    out.append(f'<text x="{ML+230}" y="{MT+12}" fill="#f87171" font-size="9">Calibração perfeita</text>')
+    out.append('</svg>')
+    return "".join(out)
 
 def calc_xg_analysis(records):
     valid = [r for r in records if r.get("xg", 0) > 0 and r.get("goals") is not None]
@@ -807,15 +958,18 @@ def rc(rate):
 def treble_roi(trebles_history):
     hist = [t for t in trebles_history if t.get("status") == "scored"]
     if not hist:
-        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,"roi_pct":None,"has_odds":False}
+        return {"total":0,"won":0,"rate":0,"staked":0,"returned":0,
+                "roi_pct":None,"profit_u":None,"avg_odds":None,"has_odds":False}
     total  = len(hist)
     won    = sum(1 for t in hist if t.get("hit"))
-    # apenas inclui no ROI financeiro as triplas onde as odds foram guardadas
     with_odds = [t for t in hist if t.get("combined_odds")]
     has_odds  = bool(with_odds)
     staked    = float(len(with_odds))
     returned  = sum(t["combined_odds"] for t in with_odds if t.get("hit"))
     roi_pct   = round((returned - staked) / staked * 100, 1) if staked else None
+    profit_u  = round(returned - staked, 2) if staked else None
+    odds_list = [t["combined_odds"] for t in with_odds]
+    avg_odds  = round(sum(odds_list) / len(odds_list), 2) if odds_list else None
     return {
         "total":    total,
         "won":      won,
@@ -823,13 +977,17 @@ def treble_roi(trebles_history):
         "staked":   staked,
         "returned": round(returned, 2),
         "roi_pct":  roi_pct,
+        "profit_u": profit_u,
+        "avg_odds": avg_odds,
         "has_odds": has_odds,
     }
 
 def treble_section_html(trebles_data):
-    pending = trebles_data.get("pending", [])
-    history = trebles_data.get("history", [])
-    roi     = treble_roi(history)
+    pending    = trebles_data.get("pending", [])
+    history    = trebles_data.get("history", [])
+    roi        = treble_roi(history)
+    today_diag = trebles_data.get("today_diag")
+    today      = today_str()
 
     today_treble = next((t for t in pending if t.get("status") == "pending"), None)
 
@@ -872,23 +1030,73 @@ def treble_section_html(trebles_data):
             f'<div class="tb-note">Aposta 1 unidade → retorno {combined} unidades se ganhar</div>'
             f'</div>'
         )
+    elif today_diag and today_diag.get("date") == today:
+        uc   = today_diag.get("unique_count", 0)
+        bc   = today_diag.get("btts_count", 0)
+        xc   = today_diag.get("x12_count", 0)
+        miss = 3 - uc
+        mkt_lbl  = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
+        conf_col = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24"}
+        found_html = ""
+        for pk in today_diag.get("found_picks", []):
+            col = conf_col.get(pk.get("conf", ""), "#94a3b8")
+            mkt = mkt_lbl.get(pk["market"], pk["market"])
+            found_html += (
+                f'<div class="tp" style="opacity:0.65">'
+                f'<span class="tpn" style="background:#1e2a3a;color:#4a5568">✓</span>'
+                f'<div class="tpi">'
+                f'<div class="tpl">{pk["league"]}</div>'
+                f'<div class="tpm">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</div>'
+                f'</div>'
+                f'<div class="tpr"><span class="tpk">{mkt}</span>'
+                f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+                f'</div></div>'
+            )
+        for _ in range(miss):
+            found_html += (
+                f'<div class="tp" style="opacity:0.35;border-style:dashed">'
+                f'<span class="tpn" style="background:#1a1a2e;color:#2d3748">?</span>'
+                f'<div class="tpi"><div class="tpm" style="color:var(--muted)">pick em falta</div></div>'
+                f'</div>'
+            )
+        today_html = (
+            f'<div class="tb-today" style="border-color:#2d3748;background:#0f1420">'
+            f'<div class="tb-today-hdr" style="color:var(--muted)">'
+            f'<span>⚠️ Sem tripla hoje — {uc}/3 picks únicos por liga</span>'
+            f'<span style="font-size:.72rem;font-weight:400;color:#4a5568">'
+            f'BTTS: {bc} · 1X2-MÉDIA: {xc}</span>'
+            f'</div>'
+            f'{found_html}'
+            f'<div class="tb-note">Critérios: BTTS ≥ 61% (ALTA/MÉDIA) ou 1X2 ≥ 61% (só MÉDIA) · máx 1 pick por liga</div>'
+            f'</div>'
+        )
     else:
-        today_html = '<div class="tb-empty">Sem tripla para hoje (picks insuficientes com alta confiança).</div>'
+        today_html = '<div class="tb-empty">Sem tripla para hoje (a aguardar run das 07:00 UTC).</div>'
 
     # ROI summary
     if roi["roi_pct"] is not None:
-        roi_col  = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
-        roi_str  = f'{"+" if roi["roi_pct"]>=0 else ""}{roi["roi_pct"]}%'
+        roi_col   = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
+        sign      = "+" if roi["profit_u"] >= 0 else ""
+        roi_str   = f'{sign}{roi["profit_u"]:.2f}u'
+        roi_sub   = f'({sign}{roi["roi_pct"]}%)'
     else:
         roi_col  = "#94a3b8"
         roi_str  = "N/D"
+        roi_sub  = "(sem odds)"
+    avg_odds_str = f'{roi["avg_odds"]:.2f}x' if roi["avg_odds"] else "N/D"
+    avg_col      = "#60a5fa" if roi["avg_odds"] else "#4a5568"
     roi_html = (
         f'<div class="tb-roi">'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["total"]}</div><div class="tb-roi-l">Triplas</div></div>'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["won"]}</div><div class="tb-roi-l">Ganhas</div></div>'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["rate"]}%</div><div class="tb-roi-l">Hit Rate</div></div>'
-        f'<div class="tb-roi-item"><div class="tb-roi-n" style="color:{roi_col}">{roi_str}</div>'
-        f'<div class="tb-roi-l">ROI{" (sem odds)" if not roi["has_odds"] else ""}</div></div>'
+        f'<div class="tb-roi-item">'
+        f'<div class="tb-roi-n" style="color:{roi_col}">{roi_str}</div>'
+        f'<div class="tb-roi-sub" style="color:{roi_col}">{roi_sub}</div>'
+        f'<div class="tb-roi-l">ROI</div></div>'
+        f'<div class="tb-roi-item">'
+        f'<div class="tb-roi-n" style="color:{avg_col}">{avg_odds_str}</div>'
+        f'<div class="tb-roi-l">Odds médias</div></div>'
         f'</div>'
     )
 
@@ -951,10 +1159,11 @@ def treble_section_html(trebles_data):
         '.tb-note{font-size:.68rem;color:var(--muted);margin-top:10px;font-style:italic}'
         '.tb-empty{color:var(--muted);font-style:italic;font-size:.82rem;padding:10px 0}'
         '.tb-roi{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}'
-        '.tb-roi-item{flex:1;padding:14px;text-align:center;border-right:1px solid var(--border)}'
+        '.tb-roi-item{flex:1;padding:12px 8px;text-align:center;border-right:1px solid var(--border)}'
         '.tb-roi-item:last-child{border-right:none}'
-        '.tb-roi-n{font-size:1.4rem;font-weight:800;line-height:1}'
-        '.tb-roi-l{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:4px}'
+        '.tb-roi-n{font-size:1.3rem;font-weight:800;line-height:1}'
+        '.tb-roi-sub{font-size:.72rem;font-weight:600;margin-top:2px}'
+        '.tb-roi-l{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}'
     )
 
     return css_extra, (
@@ -991,9 +1200,31 @@ def build_html(history, trebles_data=None):
     xga_css, xga_body = xg_analysis_html(records)
     _,       mon_body = btts_monitor_html(records)
 
+    calib_btts = calc_calibration(records, "pb", "hit_btts")
+    calib_html = ""
+    if len(calib_btts) >= 2:
+        calib_html = (
+            f'<div class="stitle" style="margin-top:20px">Calibração BTTS — ML vs Realidade</div>'
+            f'<div class="sc" style="margin-bottom:28px">'
+            f'<div class="sc-sub" style="margin-bottom:12px">Hit rate real por bucket de probabilidade ML · '
+            f'Linha = calibração perfeita · Barras de erro = IC 95% Wilson · '
+            f'Verde = modelo subestima, Vermelho = modelo sobreavalia</div>'
+            f'{_calibration_svg(calib_btts)}'
+            f'</div>'
+        )
+
     def stat_card(s):
-        col = rc(s["rate"])
-        bw  = int(s["rate"])
+        col   = rc(s["rate"])
+        bw    = int(s["rate"])
+        ci_lo = s.get("ci_lo", 0)
+        ci_hi = s.get("ci_hi", 100)
+        r30   = s.get("rolling_30")
+        r30_n = s.get("rolling_30_n", 0)
+        ci_html  = f'<div class="sc-ci">IC 95%: [{ci_lo}–{ci_hi}%]</div>'
+        r30_html = ""
+        if r30 is not None:
+            r30c     = rc(r30)
+            r30_html = f'<div class="sc-r30" style="color:{r30c}">⟳ 30d: <b>{r30}%</b> <span style="color:#4a5568">({r30_n}p)</span></div>'
         conf_rows = "".join(
             f'<tr><td class="tdc">{c}</td><td>{cv["picks"]}</td>'
             f'<td>{cv["hits"]}</td><td style="color:{rc(cv["rate"])};font-weight:700">{cv["rate"]}%</td></tr>'
@@ -1012,7 +1243,9 @@ def build_html(history, trebles_data=None):
             f'<div class="sc">'
             f'<div class="sc-top"><div><div class="sc-title">{s["label"]}</div>'
             f'<div class="sc-sub">{s["picks"]} picks · {s["hits"]} acertos</div></div>'
-            f'<div class="sc-rate" style="color:{col}">{s["rate"]}%</div></div>'
+            f'<div style="text-align:right"><div class="sc-rate" style="color:{col}">{s["rate"]}%</div>'
+            f'{ci_html}</div></div>'
+            f'{r30_html}'
             f'<div class="rbg"><div class="rf" style="width:{bw}%;background:{col}"></div></div>'
             f'{thtml}'
             f'<table class="ct"><thead><tr><th>Confiança</th><th>Picks</th><th>Acertos</th><th>Taxa</th></tr></thead>'
@@ -1064,6 +1297,7 @@ def build_html(history, trebles_data=None):
             f'</div>'
             f'<div class="stitle">Taxa de Acerto por Mercado</div>'
             f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{stat_card(s4)}{xg_card}</div>'
+            f'{calib_html}'
             f'<div class="stitle">Top Ligas (mín. 5 picks)</div>'
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
             f'{mon_body}'
@@ -1117,6 +1351,8 @@ def build_html(history, trebles_data=None):
         '.footer{text-align:center;padding:28px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border)}'
         '@media(max-width:580px){.wrap,.hdr{padding-left:14px;padding-right:14px}'
         '.xga-grid2{grid-template-columns:1fr}}'
+        '.sc-ci{font-size:.65rem;color:#4a5568;margin-top:2px;line-height:1.3}'
+        '.sc-r30{font-size:.72rem;margin-bottom:6px}'
         + treble_css + xga_css
     )
 
@@ -1152,21 +1388,41 @@ def main():
     history["records"] = migrate_picks(history.get("records", []))
 
     # ── MODO SAVE ────────────────────────────────────────────────────────────
-    save_file = preds_file(today)
-    if not os.path.exists(save_file):
+    save_file   = preds_file(today)
+    preds_saved = []
+    if os.path.exists(save_file):
+        try:
+            with open(save_file, encoding="utf-8") as f:
+                preds_saved = json.load(f)
+        except Exception:
+            pass
+
+    if not preds_saved:
         print(f"[backtest] SAVE: a guardar predições de {today}...")
-        preds = fetch_todays_predictions()
-        print(f"[backtest] {len(preds)} predições para {today}")
-        if preds:
-            with open(save_file, "w", encoding="utf-8") as f:
-                json.dump(preds, f, ensure_ascii=False, separators=(",", ":"))
+        preds_fresh = fetch_todays_predictions()
+        print(f"[backtest] {len(preds_fresh)} predições para {today}")
+        if preds_fresh:
+            _tmp = save_file + ".tmp"
+            with open(_tmp, "w", encoding="utf-8") as f:
+                json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
+            os.replace(_tmp, save_file)
             print(f"[backtest] {save_file} guardado ✓")
     else:
-        print(f"[backtest] SAVE: {save_file} já existe — a saltar")
+        print(f"[backtest] SAVE: {save_file} existe ({len(preds_saved)}) — a verificar novos jogos...")
+        preds_fresh = fetch_todays_predictions()
+        if len(preds_fresh) > len(preds_saved):
+            print(f"[backtest] +{len(preds_fresh) - len(preds_saved)} jogos novos — a actualizar {save_file}")
+            _tmp = save_file + ".tmp"
+            with open(_tmp, "w", encoding="utf-8") as f:
+                json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
+            os.replace(_tmp, save_file)
+            print(f"[backtest] {save_file} actualizado ✓")
+        else:
+            print(f"[backtest] SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
 
-    # Tentar construir tripla do dia (da preds file actual ou existente)
+    # Tentar construir tripla do dia (só bloqueia se já existe uma tripla "pending")
     today_built = any(
-        t.get("date") == today
+        t.get("date") == today and t.get("status") == "pending"
         for t in trebles.get("pending", []) + trebles.get("history", [])
     )
     if not today_built and os.path.exists(save_file):
@@ -1174,12 +1430,17 @@ def main():
             with open(save_file, encoding="utf-8") as f:
                 preds = json.load(f)
             treble = build_daily_treble(preds)
-            if treble:
+            if treble.get("status") == "pending":
                 trebles.setdefault("pending", []).append(treble)
+                trebles.pop("today_diag", None)
                 odds_str = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "?"
                 print(f"[backtest] Tripla do dia: {len(treble['picks'])} picks, odds={odds_str} ✓")
             else:
-                print("[backtest] Picks insuficientes para tripla hoje")
+                trebles["today_diag"] = treble
+                uc = treble.get("unique_count", 0)
+                bc = treble.get("btts_count", 0)
+                xc = treble.get("x12_count", 0)
+                print(f"[backtest] Picks insuficientes: {uc}/3 únicos por liga (BTTS:{bc}, 1X2:{xc})")
             save_trebles(trebles)
         except Exception as e:
             print(f"[backtest] Erro ao construir tripla: {e}")
@@ -1250,6 +1511,9 @@ def main():
     if new_records_total > 0:
         print(f"[backtest] Total acumulado: {len(history['records'])} jogos")
 
+    # Expirar triplas que ficaram presas em pending há mais de 3 dias
+    trebles = cleanup_stuck_trebles(trebles)
+
     # Pontuar triplas pendentes cujas datas já foram processadas
     still_pending = []
     for treble in trebles.get("pending", []):
@@ -1272,9 +1536,13 @@ def main():
 
     # Gerar HTML com secção de triplas
     html = build_html(history, trebles)
-    with open("docs/backtest.html", "w", encoding="utf-8") as f:
+    _tmp = "docs/backtest.html.tmp"
+    with open(_tmp, "w", encoding="utf-8") as f:
         f.write(html)
+    os.replace(_tmp, "docs/backtest.html")
     print("[backtest] docs/backtest.html gerado ✓")
+
+    cleanup_old_preds()
 
     # Relatório diário às 07:00 UTC, ou forçado em workflow_dispatch
     if datetime.now(timezone.utc).hour == 7 or os.environ.get("FORCE_EMAIL"):
@@ -1637,10 +1905,12 @@ def _email_html(history, trebles):  # noqa: C901
     # ── 6. Triplas — ROI + histórico ─────────────────────────────────────────
     roi_col = rate_col(roi["rate"]) if roi["total"] > 0 else "#94a3b8"
     if roi["roi_pct"] is not None:
-        roi_str = ("+" if roi["roi_pct"] >= 0 else "") + str(roi["roi_pct"]) + "%"
+        sign      = "+" if roi["profit_u"] >= 0 else ""
+        roi_str   = f'{sign}{roi["profit_u"]:.2f}u ({sign}{roi["roi_pct"]}%)'
         roi_label = "ROI"
     else:
         roi_str, roi_label = "N/D", "ROI (sem odds)"
+    avg_odds_str = f'{roi["avg_odds"]:.2f}x' if roi["avg_odds"] else "N/D"
 
     treble_roi_section = (
         section_title("💰 Triplas — ROI Acumulado")
@@ -1650,10 +1920,11 @@ def _email_html(history, trebles):  # noqa: C901
         + small_card(str(roi["total"]), "Triplas")
         + small_card(str(roi["won"]), "Ganhas")
         + small_card(str(roi["rate"]) + "%", "Hit Rate", roi_col)
-        + f'<td style="text-align:center;padding:12px 8px">'
-        f'<div style="font-size:18px;font-weight:800;color:{roi_col}">{roi_str}</div>'
+        + f'<td style="text-align:center;padding:12px 8px;border-right:1px solid #e2e8f0">'
+        f'<div style="font-size:15px;font-weight:800;color:{roi_col}">{roi_str}</div>'
         f'<div style="font-size:10px;color:#94a3b8;text-transform:uppercase;'
         f'letter-spacing:0.4px;margin-top:3px">{roi_label}</div></td>'
+        + small_card(avg_odds_str, "Odds médias", "#1e40af")
         + f'</tr></tbody></table>'
     )
 

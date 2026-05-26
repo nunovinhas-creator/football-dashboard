@@ -4,6 +4,8 @@ Matemática Da Bola — BSD API v2 (fixed)
 
 import os
 import json
+import math
+import time
 import requests
 from datetime import datetime, timezone, timedelta
 
@@ -24,12 +26,6 @@ def get(path, params=None):
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-def fmt_pct(v):
-    if v is None:
-        return "–"
-    return f"{round(float(v) * 100)}%"
-
-# FIX BUG 4: parse seguro de datas ISO com ou sem Z/offset
 def parse_dt(s):
     if not s:
         return None
@@ -64,20 +60,33 @@ def fetch_odds(event_id):
     except Exception:
         return None
 
-# FIX BUG 1: fetch_prediction estava em falta
-def fetch_prediction(event_id):
-    try:
-        data = get("/predictions/", {"event_id": event_id, "limit": 1})
-        results = data.get("results", [])
-        return results[0] if results else None
-    except Exception:
+def devig_pinnacle(pin, market, side):
+    """Remove a margem Pinnacle antes de calcular edge (de-vig correcto)."""
+    if not pin:
         return None
-
-def enrich(match):
-    eid  = match["id"]
-    pred = fetch_prediction(eid)
-    odds = fetch_odds(eid)
-    return {"match": match, "pred": pred, "odds": odds}
+    try:
+        if market == "1X2":
+            o_h = pin.get("home_odds")
+            o_d = pin.get("draw_odds")
+            o_a = pin.get("away_odds")
+            if not (o_h and o_d and o_a):
+                return None
+            raw = [1/float(o_h), 1/float(o_d), 1/float(o_a)]
+            overround = sum(raw)
+            fair = [p / overround for p in raw]
+            return {"HOME": fair[0], "DRAW": fair[1], "AWAY": fair[2]}.get(side)
+        if market == "Over2.5":
+            o_yes, o_no = pin.get("over_2_5"), pin.get("under_2_5")
+        else:  # BTTS
+            o_yes, o_no = pin.get("btts_yes"), pin.get("btts_no")
+        if not o_yes:
+            return None
+        implied_yes = 1.0 / float(o_yes)
+        # de-vig completo se ambos os lados disponíveis; senão margem típica Pinnacle 2-outcome ~2.5%
+        overround = (implied_yes + 1.0/float(o_no)) if o_no else 1.025
+        return implied_yes / overround
+    except (TypeError, ZeroDivisionError, ValueError):
+        return None
 
 def detect_value(pred, odds):
     if not pred or not odds:
@@ -99,15 +108,23 @@ def detect_value(pred, odds):
     ]
     values = []
     for market, side, ml_prob, pin_odds in mappings:
-        if ml_prob is None or pin_odds is None:
+        if ml_prob is None:
             continue
         try:
-            ml_p  = float(ml_prob)
-            pin_p = 1 / float(pin_odds)
-            edge  = ml_p - pin_p
-            if edge > 0.03:
-                values.append({"market": market, "side": side,
-                                "ml_prob": ml_p, "pin_odds": float(pin_odds), "edge": edge})
+            ml_p   = float(ml_prob)
+            fair_p = devig_pinnacle(pin, market, side)
+            if fair_p is None:
+                continue
+            edge = ml_p - fair_p
+            if edge > 0.05:
+                values.append({
+                    "market":    market,
+                    "side":      side,
+                    "ml_prob":   ml_p,
+                    "pin_odds":  float(pin_odds) if pin_odds else None,
+                    "fair_prob": round(fair_p, 4),
+                    "edge":      edge,
+                })
         except (TypeError, ZeroDivisionError, ValueError):
             continue
     return values
@@ -136,8 +153,6 @@ def league_flag(name):
     return "⚽"
 
 def _poisson_over2(lam):
-    """P(X > 2) para distribuição Poisson(lambda) — sem imports externos."""
-    import math
     if lam <= 0:
         return 0.0
     p_le2 = math.exp(-lam) * (1.0 + lam + lam**2 / 2.0)
@@ -246,7 +261,7 @@ def match_card_html(enriched):
     xg_a = pred.get("away_xg") or "–"
     score_pred = pred.get("most_likely_score") or "–"
     try:    xg_total = round(float(xg_h) + float(xg_a), 2)
-    except: xg_total = 0
+    except (TypeError, ValueError): xg_total = 0
 
     conf_label, _, _ = confidence_badge(conf)
     tip  = tip_label(hw, dr, aw, o25, conf)
@@ -632,6 +647,7 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
   padding:6px 0;border-bottom:1px solid #1a2540;font-size:.78rem;flex-wrap:wrap
 }}
 .tb-pick:last-child{{border-bottom:none}}
+.tb-pick-num{{width:18px;height:18px;border-radius:50%;background:#1e3a5f;color:#60a5fa;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}}
 .tb-pick-league{{color:var(--muted);min-width:120px;font-size:.68rem}}
 .tb-pick-teams{{flex:1;font-weight:600;color:var(--text);min-width:140px}}
 .tb-pick-mkt{{color:var(--sub)}}
@@ -809,6 +825,12 @@ function resetFilters() {{
 </body>
 </html>'''
 
+def escape_md(s):
+    """Escapa caracteres especiais do Markdown v1 do Telegram em valores dinâmicos."""
+    for ch in ('_', '*', '`', '['):
+        s = str(s).replace(ch, f'\\{ch}')
+    return s
+
 # ── Telegram ──────────────────────────────────────────────────────────────────
 def send_telegram(enriched_list):
     today  = today_str()
@@ -831,7 +853,7 @@ def send_telegram(enriched_list):
             odds = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
             flag = league_flag(pk["league"])
             picks_lines.append(
-                f"`{i}` {flag} *{pk['home']} vs {pk['away']}*\n"
+                f"`{i}` {flag} *{escape_md(pk['home'])} vs {escape_md(pk['away'])}*\n"
                 f"   {mkt} · {int(pk['prob']*100)}% · _{conf}_{odds}"
             )
         combined = f"\n💰 Odds combinadas: *{treble['combined_odds']:.2f}*" if treble.get("combined_odds") else ""
@@ -878,12 +900,10 @@ def send_telegram(enriched_list):
             verd = f" · _{gp['verdict']}_" if gp else ""
             rng  = f" · {gp['range']} golos" if gp else ""
             xg_lines.append(
-                f"{flag} *{c['home']} vs {c['away']}*\n"
+                f"{flag} *{escape_md(c['home'])} vs {escape_md(c['away'])}*\n"
                 f"   xG: *{c['xgt']}*{rng}{verd}"
             )
         blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
-    else:
-        blocks.append("📈 *xG ELEVADO — Over 2.5*\n_Nenhum jogo acima de 2.9 xG com confiança alta hoje._")
 
     # ── 3. Value com edge alto (>7%, BTTS ou Over2.5, confiança ALTA) ─────────
     strong_value = []
@@ -912,15 +932,14 @@ def send_telegram(enriched_list):
     if strong_value:
         val_lines = []
         for v in strong_value[:5]:
-            flag = league_flag(v["league"])
-            mkt  = "🔁 BTTS" if v["market"] == "BTTS" else "📈 Over 2.5"
+            flag     = league_flag(v["league"])
+            mkt      = "🔁 BTTS" if v["market"] == "BTTS" else "📈 Over 2.5"
+            odds_str = f" @{v['pin_odds']:.2f}" if v.get("pin_odds") else ""
             val_lines.append(
-                f"{flag} *{v['home']} vs {v['away']}*\n"
-                f"   {mkt} · ML {v['ml_prob']*100:.0f}% · Pinnacle @{v['pin_odds']:.2f} · edge *+{v['edge']*100:.1f}%*"
+                f"{flag} *{escape_md(v['home'])} vs {escape_md(v['away'])}*\n"
+                f"   {mkt} · ML {v['ml_prob']*100:.0f}% · fair {v['fair_prob']*100:.1f}%{odds_str} · edge *+{v['edge']*100:.1f}%*"
             )
-        blocks.append("💎 *VALUE EDGE ALTO (>7%, ALTA)*\n" + "\n\n".join(val_lines))
-    else:
-        blocks.append("💎 *VALUE EDGE ALTO*\n_Nenhum pick com edge >7% e confiança ALTA hoje._")
+        blocks.append("💎 *VALUE EDGE ALTO (>7%)*\n" + "\n\n".join(val_lines))
 
     # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
@@ -987,6 +1006,7 @@ def main():
         }
 
         odds = fetch_odds(eid)
+        time.sleep(0.2)
         home = m.get("home_team", "?")
         away = m.get("away_team", "?")
         league = m.get("_league_name", "")
@@ -1014,8 +1034,10 @@ def main():
 
     html = build_html(enriched_list)
     os.makedirs("docs", exist_ok=True)
-    with open("docs/dashboard.html", "w", encoding="utf-8") as f:
+    _tmp = "docs/dashboard.html.tmp"
+    with open(_tmp, "w", encoding="utf-8") as f:
         f.write(html)
+    os.replace(_tmp, "docs/dashboard.html")
     print("[dashboard] docs/dashboard.html guardado")
 
     send_telegram(enriched_list)
