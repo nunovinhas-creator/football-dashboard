@@ -46,6 +46,15 @@ def parse_dt(s):
 def preds_file(date_str):
     return f"docs/preds_{date_str}.json"
 
+def wilson_ci(hits, n, z=1.96):
+    """Intervalo de confiança Wilson 95% para proporções."""
+    if n == 0:
+        return 0.0, 100.0
+    p = hits / n
+    center = (p + z*z/(2*n)) / (1 + z*z/n)
+    half   = z * math.sqrt(p*(1-p)/n + z*z/(4*n*n)) / (1 + z*z/n)
+    return max(0.0, round((center - half)*100, 1)), min(100.0, round((center + half)*100, 1))
+
 # ── Persistência ──────────────────────────────────────────────────────────────
 
 def load_history():
@@ -59,8 +68,10 @@ def load_history():
 
 def save_history(h):
     os.makedirs("docs", exist_ok=True)
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+    tmp = HISTORY_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(h, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, HISTORY_FILE)
 
 def load_trebles():
     if os.path.exists(TREBLES_FILE):
@@ -73,8 +84,10 @@ def load_trebles():
 
 def save_trebles(t):
     os.makedirs("docs", exist_ok=True)
-    with open(TREBLES_FILE, "w", encoding="utf-8") as f:
+    tmp = TREBLES_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(t, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, TREBLES_FILE)
 
 # ── API ───────────────────────────────────────────────────────────────────────
 
@@ -465,9 +478,16 @@ def cleanup_stuck_trebles(trebles, max_days=3):
 def calc_stats(records, pick_key, hit_key, label):
     subset = [r for r in records if r.get(pick_key)]
     if not subset:
-        return {"label": label, "picks": 0, "hits": 0, "rate": 0.0, "by_conf": {}, "trend": []}
-    hits = sum(1 for r in subset if r.get(hit_key))
-    rate = round(hits / len(subset) * 100, 1)
+        return {"label": label, "picks": 0, "hits": 0, "rate": 0.0,
+                "ci_lo": 0.0, "ci_hi": 100.0, "rolling_30": None, "rolling_30_n": 0,
+                "by_conf": {}, "trend": []}
+    hits   = sum(1 for r in subset if r.get(hit_key))
+    rate   = round(hits / len(subset) * 100, 1)
+    ci_lo, ci_hi = wilson_ci(hits, len(subset))
+    cutoff_30  = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+    recent     = [r for r in subset if (r.get("date") or "") >= cutoff_30]
+    r_hits     = sum(1 for r in recent if r.get(hit_key))
+    rolling_30 = round(r_hits / len(recent) * 100, 1) if recent else None
     by_conf = {}
     for c in ["ALTA", "MÉDIA", "BAIXA"]:
         sub = [r for r in subset if r["conf"] == c]
@@ -486,7 +506,10 @@ def calc_stats(records, pick_key, hit_key, label):
             pass
     trend = [{"w":wk,"rate":round(v["h"]/v["p"]*100,1),"p":v["p"]}
              for wk,v in sorted(weekly.items())[-8:] if v["p"]>=3]
-    return {"label":label,"picks":len(subset),"hits":hits,"rate":rate,"by_conf":by_conf,"trend":trend}
+    return {"label": label, "picks": len(subset), "hits": hits, "rate": rate,
+            "ci_lo": ci_lo, "ci_hi": ci_hi,
+            "rolling_30": rolling_30, "rolling_30_n": len(recent),
+            "by_conf": by_conf, "trend": trend}
 
 def calc_xg(records):
     s = [r for r in records if r.get("pick_xg") and r.get("xg",0)>0]
@@ -497,6 +520,78 @@ def calc_xg(records):
         "avg_goals": round(sum(r["goals"] for r in s)/len(s),2),
         "over_rate": round(sum(1 for r in s if r["goals"]>r["xg"])/len(s)*100,1),
     }
+
+def calc_calibration(records, prob_key, hit_key, min_n=2):
+    """
+    Agrupa predições em buckets de probabilidade ML e calcula hit rate real.
+    Revela se o modelo está bem calibrado: quando diz 70%, acontece 70%?
+    """
+    buckets_defs = [(45, 55), (55, 61), (61, 65), (65, 70), (70, 80), (80, 101)]
+    result = []
+    for lo, hi in buckets_defs:
+        subset = [r for r in records if lo <= r.get(prob_key, 0) < hi]
+        if len(subset) < min_n:
+            continue
+        hits = sum(1 for r in subset if r.get(hit_key))
+        ci_lo, ci_hi = wilson_ci(hits, len(subset))
+        result.append({
+            "label":     f"{lo}–{min(hi, 100)}%",
+            "n":         len(subset),
+            "predicted": (lo + min(hi, 100)) / 2,
+            "actual":    round(hits / len(subset) * 100, 1),
+            "ci_lo":     ci_lo,
+            "ci_hi":     ci_hi,
+        })
+    return result
+
+def _calibration_svg(calib_data):
+    """SVG de barras: hit rate real vs previsão ML por bucket. IC 95% Wilson incluído."""
+    if not calib_data:
+        return ""
+    W, H   = 460, 220
+    ML, MR, MT, MB = 52, 20, 28, 48
+    pw, ph = W - ML - MR, H - MT - MB
+    n      = len(calib_data)
+    slot   = pw / n
+    bw     = slot * 0.55
+
+    def sy(pct): return MT + ph - pct / 100 * ph
+
+    out = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="display:block;max-width:{W}px">']
+    for pct in [50, 65, 80]:
+        y = sy(pct)
+        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1" stroke-dasharray="4,3"/>')
+        out.append(f'<text x="{ML-5}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{pct}%</text>')
+    out.append(f'<line x1="{ML}" y1="{MT}" x2="{ML}" y2="{MT+ph}" stroke="#2d3748" stroke-width="1"/>')
+    if n >= 2:
+        x0 = ML + slot * 0.5
+        x1 = ML + slot * (n - 0.5)
+        y0 = sy(calib_data[0]["predicted"])
+        y1 = sy(calib_data[-1]["predicted"])
+        out.append(f'<line x1="{x0:.0f}" y1="{y0:.0f}" x2="{x1:.0f}" y2="{y1:.0f}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
+    for i, d in enumerate(calib_data):
+        cx  = ML + slot * (i + 0.5)
+        bh  = max(2, d["actual"] / 100 * ph)
+        by  = MT + ph - bh
+        col = "#4ade80" if d["actual"] >= d["predicted"] else "#f87171"
+        out.append(f'<rect x="{cx - bw/2:.0f}" y="{by:.0f}" width="{bw:.0f}" height="{bh:.0f}" fill="{col}" opacity="0.75" rx="2"/>')
+        ci_lo_y = sy(d["ci_lo"])
+        ci_hi_y = sy(d["ci_hi"])
+        out.append(f'<line x1="{cx:.0f}" y1="{ci_lo_y:.0f}" x2="{cx:.0f}" y2="{ci_hi_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_lo_y:.0f}" x2="{cx+4:.0f}" y2="{ci_lo_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_hi_y:.0f}" x2="{cx+4:.0f}" y2="{ci_hi_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<circle cx="{cx:.0f}" cy="{sy(d["actual"]):.0f}" r="3.5" fill="{col}"/>')
+        out.append(f'<text x="{cx:.0f}" y="{by-5:.0f}" fill="{col}" font-size="9" text-anchor="middle" font-weight="700">{d["actual"]:.0f}%</text>')
+        out.append(f'<text x="{cx:.0f}" y="{MT+ph+14}" fill="#4a5568" font-size="9" text-anchor="middle">{d["label"]}</text>')
+        out.append(f'<text x="{cx:.0f}" y="{MT+ph+26}" fill="#4a5568" font-size="9" text-anchor="middle">n={d["n"]}</text>')
+    out.append(f'<circle cx="{ML+4}" cy="{MT+8}" r="4" fill="#4ade80" opacity="0.8"/>')
+    out.append(f'<text x="{ML+12}" y="{MT+12}" fill="#4ade80" font-size="9">Acima do previsto</text>')
+    out.append(f'<circle cx="{ML+110}" cy="{MT+8}" r="4" fill="#f87171" opacity="0.8"/>')
+    out.append(f'<text x="{ML+118}" y="{MT+12}" fill="#f87171" font-size="9">Abaixo do previsto</text>')
+    out.append(f'<line x1="{ML+210}" y1="{MT+8}" x2="{ML+226}" y2="{MT+8}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
+    out.append(f'<text x="{ML+230}" y="{MT+12}" fill="#f87171" font-size="9">Calibração perfeita</text>')
+    out.append('</svg>')
+    return "".join(out)
 
 def calc_xg_analysis(records):
     valid = [r for r in records if r.get("xg", 0) > 0 and r.get("goals") is not None]
@@ -1105,9 +1200,31 @@ def build_html(history, trebles_data=None):
     xga_css, xga_body = xg_analysis_html(records)
     _,       mon_body = btts_monitor_html(records)
 
+    calib_btts = calc_calibration(records, "pb", "hit_btts")
+    calib_html = ""
+    if len(calib_btts) >= 2:
+        calib_html = (
+            f'<div class="stitle" style="margin-top:20px">Calibração BTTS — ML vs Realidade</div>'
+            f'<div class="sc" style="margin-bottom:28px">'
+            f'<div class="sc-sub" style="margin-bottom:12px">Hit rate real por bucket de probabilidade ML · '
+            f'Linha = calibração perfeita · Barras de erro = IC 95% Wilson · '
+            f'Verde = modelo subestima, Vermelho = modelo sobreavalia</div>'
+            f'{_calibration_svg(calib_btts)}'
+            f'</div>'
+        )
+
     def stat_card(s):
-        col = rc(s["rate"])
-        bw  = int(s["rate"])
+        col   = rc(s["rate"])
+        bw    = int(s["rate"])
+        ci_lo = s.get("ci_lo", 0)
+        ci_hi = s.get("ci_hi", 100)
+        r30   = s.get("rolling_30")
+        r30_n = s.get("rolling_30_n", 0)
+        ci_html  = f'<div class="sc-ci">IC 95%: [{ci_lo}–{ci_hi}%]</div>'
+        r30_html = ""
+        if r30 is not None:
+            r30c     = rc(r30)
+            r30_html = f'<div class="sc-r30" style="color:{r30c}">⟳ 30d: <b>{r30}%</b> <span style="color:#4a5568">({r30_n}p)</span></div>'
         conf_rows = "".join(
             f'<tr><td class="tdc">{c}</td><td>{cv["picks"]}</td>'
             f'<td>{cv["hits"]}</td><td style="color:{rc(cv["rate"])};font-weight:700">{cv["rate"]}%</td></tr>'
@@ -1126,7 +1243,9 @@ def build_html(history, trebles_data=None):
             f'<div class="sc">'
             f'<div class="sc-top"><div><div class="sc-title">{s["label"]}</div>'
             f'<div class="sc-sub">{s["picks"]} picks · {s["hits"]} acertos</div></div>'
-            f'<div class="sc-rate" style="color:{col}">{s["rate"]}%</div></div>'
+            f'<div style="text-align:right"><div class="sc-rate" style="color:{col}">{s["rate"]}%</div>'
+            f'{ci_html}</div></div>'
+            f'{r30_html}'
             f'<div class="rbg"><div class="rf" style="width:{bw}%;background:{col}"></div></div>'
             f'{thtml}'
             f'<table class="ct"><thead><tr><th>Confiança</th><th>Picks</th><th>Acertos</th><th>Taxa</th></tr></thead>'
@@ -1178,6 +1297,7 @@ def build_html(history, trebles_data=None):
             f'</div>'
             f'<div class="stitle">Taxa de Acerto por Mercado</div>'
             f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{stat_card(s4)}{xg_card}</div>'
+            f'{calib_html}'
             f'<div class="stitle">Top Ligas (mín. 5 picks)</div>'
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
             f'{mon_body}'
@@ -1231,6 +1351,8 @@ def build_html(history, trebles_data=None):
         '.footer{text-align:center;padding:28px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border)}'
         '@media(max-width:580px){.wrap,.hdr{padding-left:14px;padding-right:14px}'
         '.xga-grid2{grid-template-columns:1fr}}'
+        '.sc-ci{font-size:.65rem;color:#4a5568;margin-top:2px;line-height:1.3}'
+        '.sc-r30{font-size:.72rem;margin-bottom:6px}'
         + treble_css + xga_css
     )
 
@@ -1280,16 +1402,20 @@ def main():
         preds_fresh = fetch_todays_predictions()
         print(f"[backtest] {len(preds_fresh)} predições para {today}")
         if preds_fresh:
-            with open(save_file, "w", encoding="utf-8") as f:
+            _tmp = save_file + ".tmp"
+            with open(_tmp, "w", encoding="utf-8") as f:
                 json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
+            os.replace(_tmp, save_file)
             print(f"[backtest] {save_file} guardado ✓")
     else:
         print(f"[backtest] SAVE: {save_file} existe ({len(preds_saved)}) — a verificar novos jogos...")
         preds_fresh = fetch_todays_predictions()
         if len(preds_fresh) > len(preds_saved):
             print(f"[backtest] +{len(preds_fresh) - len(preds_saved)} jogos novos — a actualizar {save_file}")
-            with open(save_file, "w", encoding="utf-8") as f:
+            _tmp = save_file + ".tmp"
+            with open(_tmp, "w", encoding="utf-8") as f:
                 json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
+            os.replace(_tmp, save_file)
             print(f"[backtest] {save_file} actualizado ✓")
         else:
             print(f"[backtest] SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
@@ -1410,8 +1536,10 @@ def main():
 
     # Gerar HTML com secção de triplas
     html = build_html(history, trebles)
-    with open("docs/backtest.html", "w", encoding="utf-8") as f:
+    _tmp = "docs/backtest.html.tmp"
+    with open(_tmp, "w", encoding="utf-8") as f:
         f.write(html)
+    os.replace(_tmp, "docs/backtest.html")
     print("[backtest] docs/backtest.html gerado ✓")
 
     cleanup_old_preds()

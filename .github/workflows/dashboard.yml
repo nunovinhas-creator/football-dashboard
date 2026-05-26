@@ -10,6 +10,10 @@ on:
     - cron: "0 0 * * *"    # 00:00 — SCORE
   workflow_dispatch:
 
+concurrency:
+  group: dashboard
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
