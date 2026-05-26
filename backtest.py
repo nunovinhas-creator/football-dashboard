@@ -345,8 +345,23 @@ def build_daily_treble(preds):
             seen[c["league"]] = c
     unique = list(seen.values())
 
+    btts_c = sum(1 for c in candidates if c["market"] == "BTTS")
+    x12_c  = sum(1 for c in candidates if c["market"].startswith("1X2"))
+
     if len(unique) < 3:
-        return None
+        found = [dict(c) for c in sorted(unique, key=lambda x: (x["priority"], -x["prob"]))]
+        for c in found:
+            c.pop("priority", None)
+        return {
+            "date":          today,
+            "status":        "no_picks",
+            "btts_count":    btts_c,
+            "x12_count":     x12_c,
+            "unique_count":  len(unique),
+            "found_picks":   found,
+            "picks":         [],
+            "combined_odds": None,
+        }
 
     picks = sorted(unique, key=lambda x: (x["priority"], -x["prob"]))[:3]
     for p in picks:
@@ -873,9 +888,11 @@ def treble_roi(trebles_history):
     }
 
 def treble_section_html(trebles_data):
-    pending = trebles_data.get("pending", [])
-    history = trebles_data.get("history", [])
-    roi     = treble_roi(history)
+    pending    = trebles_data.get("pending", [])
+    history    = trebles_data.get("history", [])
+    roi        = treble_roi(history)
+    today_diag = trebles_data.get("today_diag")
+    today      = today_str()
 
     today_treble = next((t for t in pending if t.get("status") == "pending"), None)
 
@@ -918,8 +935,48 @@ def treble_section_html(trebles_data):
             f'<div class="tb-note">Aposta 1 unidade → retorno {combined} unidades se ganhar</div>'
             f'</div>'
         )
+    elif today_diag and today_diag.get("date") == today:
+        uc   = today_diag.get("unique_count", 0)
+        bc   = today_diag.get("btts_count", 0)
+        xc   = today_diag.get("x12_count", 0)
+        miss = 3 - uc
+        mkt_lbl  = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
+        conf_col = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24"}
+        found_html = ""
+        for pk in today_diag.get("found_picks", []):
+            col = conf_col.get(pk.get("conf", ""), "#94a3b8")
+            mkt = mkt_lbl.get(pk["market"], pk["market"])
+            found_html += (
+                f'<div class="tp" style="opacity:0.65">'
+                f'<span class="tpn" style="background:#1e2a3a;color:#4a5568">✓</span>'
+                f'<div class="tpi">'
+                f'<div class="tpl">{pk["league"]}</div>'
+                f'<div class="tpm">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</div>'
+                f'</div>'
+                f'<div class="tpr"><span class="tpk">{mkt}</span>'
+                f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+                f'</div></div>'
+            )
+        for _ in range(miss):
+            found_html += (
+                f'<div class="tp" style="opacity:0.35;border-style:dashed">'
+                f'<span class="tpn" style="background:#1a1a2e;color:#2d3748">?</span>'
+                f'<div class="tpi"><div class="tpm" style="color:var(--muted)">pick em falta</div></div>'
+                f'</div>'
+            )
+        today_html = (
+            f'<div class="tb-today" style="border-color:#2d3748;background:#0f1420">'
+            f'<div class="tb-today-hdr" style="color:var(--muted)">'
+            f'<span>⚠️ Sem tripla hoje — {uc}/3 picks únicos por liga</span>'
+            f'<span style="font-size:.72rem;font-weight:400;color:#4a5568">'
+            f'BTTS: {bc} · 1X2-MÉDIA: {xc}</span>'
+            f'</div>'
+            f'{found_html}'
+            f'<div class="tb-note">Critérios: BTTS ≥ 61% (ALTA/MÉDIA) ou 1X2 ≥ 61% (só MÉDIA) · máx 1 pick por liga</div>'
+            f'</div>'
+        )
     else:
-        today_html = '<div class="tb-empty">Sem tripla para hoje (picks insuficientes com alta confiança).</div>'
+        today_html = '<div class="tb-empty">Sem tripla para hoje (a aguardar run das 07:00 UTC).</div>'
 
     # ROI summary
     if roi["roi_pct"] is not None:
@@ -1237,9 +1294,9 @@ def main():
         else:
             print(f"[backtest] SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
 
-    # Tentar construir tripla do dia (da preds file actual ou existente)
+    # Tentar construir tripla do dia (só bloqueia se já existe uma tripla "pending")
     today_built = any(
-        t.get("date") == today
+        t.get("date") == today and t.get("status") == "pending"
         for t in trebles.get("pending", []) + trebles.get("history", [])
     )
     if not today_built and os.path.exists(save_file):
@@ -1247,12 +1304,17 @@ def main():
             with open(save_file, encoding="utf-8") as f:
                 preds = json.load(f)
             treble = build_daily_treble(preds)
-            if treble:
+            if treble.get("status") == "pending":
                 trebles.setdefault("pending", []).append(treble)
+                trebles.pop("today_diag", None)
                 odds_str = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "?"
                 print(f"[backtest] Tripla do dia: {len(treble['picks'])} picks, odds={odds_str} ✓")
             else:
-                print("[backtest] Picks insuficientes para tripla hoje")
+                trebles["today_diag"] = treble
+                uc = treble.get("unique_count", 0)
+                bc = treble.get("btts_count", 0)
+                xc = treble.get("x12_count", 0)
+                print(f"[backtest] Picks insuficientes: {uc}/3 únicos por liga (BTTS:{bc}, 1X2:{xc})")
             save_trebles(trebles)
         except Exception as e:
             print(f"[backtest] Erro ao construir tripla: {e}")
