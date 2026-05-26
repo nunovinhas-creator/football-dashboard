@@ -1298,6 +1298,11 @@ def build_html(history, trebles_data=None):
             f'<div class="stitle">Taxa de Acerto por Mercado</div>'
             f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{stat_card(s4)}{xg_card}</div>'
             f'{calib_html}'
+            f'<div style="background:#1c1a10;border:1px solid #78350f;border-radius:8px;'
+            f'padding:10px 14px;margin-bottom:24px;font-size:.72rem;color:#fbbf24;line-height:1.5">'
+            f'<b>⚠ Risco in-sample:</b> os thresholds de selecção (BTTS ≥ 61%, 1X2-MÉDIA ≥ 61%) '
+            f'foram optimizados nos mesmos {total} registos que avaliam o desempenho — as métricas '
+            f'podem sobrestimar a performance real. Validação out-of-sample recomendada quando N ≥ 400 por mercado.</div>'
             f'<div class="stitle">Top Ligas (mín. 5 picks)</div>'
             f'<div class="lgrid">{lt(tl1,"1X2")}{lt(tl2,"Over 2.5")}{lt(tl3,"BTTS")}</div>'
             f'{mon_body}'
@@ -1881,6 +1886,13 @@ def _email_html(history, trebles):  # noqa: C901
         notes.append(("🟡", f'1X2-MÉDIA: amostra pequena ({s_1x2["picks"]} picks)',
             f'{s_1x2["rate"]}% com apenas {s_1x2["picks"]} picks — resultado promissor '
             f'mas não é estatisticamente conclusivo. Monitorizar.'))
+
+    # Aviso permanente de optimização in-sample
+    notes.append(("🔴", 'Risco de overfitting in-sample',
+        f'Os thresholds de selecção (ex: BTTS ≥ 61%, 1X2-MÉDIA ≥ 61%) foram '
+        f'calibrados nos mesmos {total_records} registos que avaliam o desempenho. '
+        f'As métricas apresentadas são in-sample — podem sobrestimar a performance real. '
+        f'Validação out-of-sample recomendada quando N ≥ 400 por mercado.'))
 
     notes_rows = ""
     for icon, title, body in notes:
