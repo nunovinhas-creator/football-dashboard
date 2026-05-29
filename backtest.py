@@ -25,16 +25,22 @@ GMAIL_USER   = os.environ.get("GMAIL_USER", "")
 GMAIL_PASS   = os.environ.get("GMAIL_APP_PASSWORD", "")
 EMAIL_TO     = "nunovinhas@gmail.com"
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 _RETRY_DELAYS = [2, 5, 15]
+
+def _log(level, msg):
+    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{ts}] {level:5s} {msg}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE DADOS — BSD API
+# ══════════════════════════════════════════════════════════════════════════════
 
 def get(path, params=None, _retry=0):
     try:
         r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
         if r.status_code in (429, 503) and _retry < len(_RETRY_DELAYS):
             wait = _RETRY_DELAYS[_retry]
-            print(f"[WARN] HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
+            _log("WARN", f"HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
             return get(path, params, _retry + 1)
         r.raise_for_status()
@@ -42,7 +48,7 @@ def get(path, params=None, _retry=0):
     except requests.exceptions.RequestException as e:
         if _retry < len(_RETRY_DELAYS):
             wait = _RETRY_DELAYS[_retry]
-            print(f"[WARN] request falhou ({e}) — aguardar {wait}s")
+            _log("WARN", f"request falhou ({e}) — aguardar {wait}s")
             time.sleep(wait)
             return get(path, params, _retry + 1)
         raise
@@ -50,13 +56,30 @@ def get(path, params=None, _retry=0):
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-def parse_dt(s):
+def parse_dt(s, context=""):
     if not s:
         return None
-    try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
-    except Exception:
-        return None
+    if isinstance(s, str):
+        s = s.strip()
+        for transform in (
+            lambda x: x.replace("Z", "+00:00"),
+            lambda x: x,
+        ):
+            try:
+                return datetime.fromisoformat(transform(s))
+            except ValueError:
+                pass
+        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+    _log("WARN", f"parse_dt: formato desconhecido '{s}'" + (f" [{context}]" if context else ""))
+    return None
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE DADOS — persistência
+# ══════════════════════════════════════════════════════════════════════════════
 
 def preds_file(date_str):
     return f"docs/preds_{date_str}.json"
@@ -140,7 +163,7 @@ def fetch_todays_predictions():
                 break
             offset += 50
         except Exception as e:
-            print(f"  [WARN] offset={offset}: {e}")
+            _log("WARN", f"offset={offset}: {e}")
             break
     return all_preds
 
@@ -161,7 +184,9 @@ def fetch_event_result(event_id):
     except Exception:
         return None
 
-# ── Thresholds actualizados por mercado ───────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE NEGÓCIO — scoring e thresholds
+# ══════════════════════════════════════════════════════════════════════════════
 #
 # pick_1x2:  só confiança MÉDIA (ALTA estava a 33%, BAIXA < 50%)
 # pick_o25:  xG total >= 2.9 (o po do modelo estava descalibrado a 47% em qualquer threshold)
@@ -289,7 +314,9 @@ def migrate_picks(records):
         r["hit_goal_range"]   = gp_low <= goals <= gp_low + 1 if goals >= 0 else False
     return records
 
-# ── Builder de Triplas ────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE NEGÓCIO — sistema de triplas
+# ══════════════════════════════════════════════════════════════════════════════
 
 EXCLUDED_LEAGUES = {
     # xG sistematicamente sobreavaliado (-0.54 golos médios); 0% hit rate BTTS e O25 em amostra
@@ -460,9 +487,9 @@ def cleanup_old_preds(days_to_keep=60):
                 os.remove(os.path.join("docs", fname))
                 removed += 1
             except Exception as e:
-                print(f"[WARN] cleanup: não foi possível remover {fname}: {e}")
+                _log("WARN", f"cleanup: não foi possível remover {fname}: {e}")
     if removed:
-        print(f"[backtest] cleanup: {removed} snapshots antigos removidos (>{days_to_keep} dias)")
+        _log("INFO", f"cleanup: {removed} snapshots antigos removidos (>{days_to_keep} dias)")
 
 def cleanup_stuck_trebles(trebles, max_days=3):
     today_dt   = datetime.now(timezone.utc)
@@ -475,7 +502,7 @@ def cleanup_stuck_trebles(trebles, max_days=3):
         except Exception:
             days_old = 0
         if days_old > max_days:
-            print(f"[backtest] Tripla {t_date} há {days_old} dias pendente — expirada (−1u)")
+            _log("INFO", f"Tripla {t_date} há {days_old} dias pendente — expirada (−1u)")
             trebles.setdefault("history", []).append({
                 **treble,
                 "status":       "scored",
@@ -488,7 +515,9 @@ def cleanup_stuck_trebles(trebles, max_days=3):
     trebles["pending"] = still_pending
     return trebles
 
-# ── Stats e HTML ──────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE APRESENTAÇÃO — estatísticas e HTML
+# ══════════════════════════════════════════════════════════════════════════════
 
 def calc_stats(records, pick_key, hit_key, label):
     subset = [r for r in records if r.get(pick_key)]
@@ -1395,7 +1424,9 @@ def build_html(history, trebles_data=None):
         f'</body></html>'
     )
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# PONTO DE ENTRADA
+# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
     today = today_str()
@@ -1418,27 +1449,27 @@ def main():
             pass
 
     if not preds_saved:
-        print(f"[backtest] SAVE: a guardar predições de {today}...")
+        _log("INFO", f"SAVE: a guardar predições de {today}...")
         preds_fresh = fetch_todays_predictions()
-        print(f"[backtest] {len(preds_fresh)} predições para {today}")
+        _log("INFO", f"{len(preds_fresh)} predições para {today}")
         if preds_fresh:
             _tmp = save_file + ".tmp"
             with open(_tmp, "w", encoding="utf-8") as f:
                 json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
             os.replace(_tmp, save_file)
-            print(f"[backtest] {save_file} guardado ✓")
+            _log("INFO", f"{save_file} guardado ✓")
     else:
-        print(f"[backtest] SAVE: {save_file} existe ({len(preds_saved)}) — a verificar novos jogos...")
+        _log("INFO", f"SAVE: {save_file} existe ({len(preds_saved)}) — a verificar novos jogos...")
         preds_fresh = fetch_todays_predictions()
         if len(preds_fresh) > len(preds_saved):
-            print(f"[backtest] +{len(preds_fresh) - len(preds_saved)} jogos novos — a actualizar {save_file}")
+            _log("INFO", f"+{len(preds_fresh) - len(preds_saved)} jogos novos — a actualizar {save_file}")
             _tmp = save_file + ".tmp"
             with open(_tmp, "w", encoding="utf-8") as f:
                 json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
             os.replace(_tmp, save_file)
-            print(f"[backtest] {save_file} actualizado ✓")
+            _log("INFO", f"{save_file} actualizado ✓")
         else:
-            print(f"[backtest] SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
+            _log("INFO", f"SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
 
     # Tentar construir tripla do dia (só bloqueia se já existe uma tripla "pending")
     today_built = any(
@@ -1454,16 +1485,16 @@ def main():
                 trebles.setdefault("pending", []).append(treble)
                 trebles.pop("today_diag", None)
                 odds_str = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "?"
-                print(f"[backtest] Tripla do dia: {len(treble['picks'])} picks, odds={odds_str} ✓")
+                _log("INFO", f"Tripla do dia: {len(treble['picks'])} picks, odds={odds_str} ✓")
             else:
                 trebles["today_diag"] = treble
                 uc = treble.get("unique_count", 0)
                 bc = treble.get("btts_count", 0)
                 xc = treble.get("x12_count", 0)
-                print(f"[backtest] Picks insuficientes: {uc}/3 únicos por liga (BTTS:{bc}, 1X2:{xc})")
+                _log("INFO", f"Picks insuficientes: {uc}/3 únicos por liga (BTTS:{bc}, 1X2:{xc})")
             save_trebles(trebles)
         except Exception as e:
-            print(f"[backtest] Erro ao construir tripla: {e}")
+            _log("ERR", f"Erro ao construir tripla: {e}")
 
     # ── MODO SCORE ───────────────────────────────────────────────────────────
     processed = history.get("dates_processed", [])
@@ -1481,20 +1512,20 @@ def main():
             continue
         pending_dates.append(date_str)
 
-    print(f"[backtest] Datas pendentes para SCORE: {pending_dates or 'nenhuma'}")
+    _log("INFO", f"Datas pendentes para SCORE: {pending_dates or 'nenhuma'}")
 
     new_records_total = 0
     for date_str in pending_dates:
         yfile = preds_file(date_str)
-        print(f"[backtest] SCORE: a processar {date_str}...")
+        _log("INFO", f"SCORE: a processar {date_str}...")
         try:
             with open(yfile, encoding="utf-8") as f:
                 preds = json.load(f)
         except Exception as e:
-            print(f"[backtest] SCORE: erro a ler {yfile}: {e}")
+            _log("ERR", f"SCORE: erro a ler {yfile}: {e}")
             continue
 
-        print(f"[backtest] {len(preds)} predições carregadas de {date_str}")
+        _log("INFO", f"{len(preds)} predições carregadas de {date_str}")
         new_records = []
         found = 0
         not_finished = 0
@@ -1510,7 +1541,7 @@ def main():
             else:
                 not_finished += 1
 
-        print(f"[backtest] {found}/{len(preds)} com resultado | {not_finished} sem resultado")
+        _log("INFO", f"{found}/{len(preds)} com resultado | {not_finished} sem resultado")
 
         coverage = found / len(preds) if preds else 0
         if coverage >= 0.7:
@@ -1519,17 +1550,17 @@ def main():
             history["dates_processed"] = list(set(processed + [date_str]))
             processed = history["dates_processed"]
             new_records_total += len(new_records)
-            print(f"[backtest] {date_str} marcado como processado ({coverage:.0%} cobertura)")
+            _log("INFO", f"{date_str} marcado como processado ({coverage:.0%} cobertura)")
         else:
             history["records"] = [r for r in history.get("records",[]) if r.get("date") != date_str]
             history["records"].extend(new_records)
             history.setdefault("dates_partial", {})[date_str] = found
-            print(f"[backtest] {date_str} parcial ({coverage:.0%}) — tentará de novo amanhã")
+            _log("INFO", f"{date_str} parcial ({coverage:.0%}) — tentará de novo amanhã")
 
         save_history(history)
 
     if new_records_total > 0:
-        print(f"[backtest] Total acumulado: {len(history['records'])} jogos")
+        _log("INFO", f"Total acumulado: {len(history['records'])} jogos")
 
     # Expirar triplas que ficaram presas em pending há mais de 3 dias
     trebles = cleanup_stuck_trebles(trebles)
@@ -1545,7 +1576,7 @@ def main():
                 trebles.setdefault("history", []).append(scored)
                 result_str = "✓ GANHOU" if scored["hit"] else "✗ PERDEU"
                 odds_str   = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "?"
-                print(f"[backtest] Tripla {t_date}: {result_str} (odds={odds_str})")
+                _log("INFO", f"Tripla {t_date}: {result_str} (odds={odds_str})")
             else:
                 still_pending.append(treble)
         else:
@@ -1560,7 +1591,7 @@ def main():
     with open(_tmp, "w", encoding="utf-8") as f:
         f.write(html)
     os.replace(_tmp, "docs/backtest.html")
-    print("[backtest] docs/backtest.html gerado ✓")
+    _log("INFO", "docs/backtest.html gerado ✓")
 
     cleanup_old_preds()
 
@@ -2055,7 +2086,7 @@ def _email_html(history, trebles):  # noqa: C901
 
 def send_email_report(history, trebles):
     if not GMAIL_USER or not GMAIL_PASS:
-        print("[email] GMAIL_USER ou GMAIL_APP_PASSWORD não configurado — a saltar")
+        _log("INFO", "GMAIL_USER ou GMAIL_APP_PASSWORD não configurado — a saltar")
         return
     today = today_str()
     try:
@@ -2068,9 +2099,9 @@ def send_email_report(history, trebles):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:
             server.login(GMAIL_USER, GMAIL_PASS)
             server.sendmail(GMAIL_USER, EMAIL_TO, msg.as_string())
-        print(f"[email] Relatório {today} enviado para {EMAIL_TO} ✓")
+        _log("INFO", f"Relatório {today} enviado para {EMAIL_TO} ✓")
     except Exception as e:
-        print(f"[WARN] email falhou: {e}")
+        _log("WARN", f"email falhou: {e}")
 
 if __name__ == "__main__":
     main()

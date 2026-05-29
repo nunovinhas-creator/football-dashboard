@@ -7,6 +7,7 @@ import json
 import math
 import time
 import requests
+from collections import Counter
 from datetime import datetime, timezone, timedelta
 
 BSD_KEY  = os.environ["BSD_API_KEY"]
@@ -20,12 +21,20 @@ HEADERS = {"Authorization": f"Token {BSD_KEY}"}
 
 _RETRY_DELAYS = [2, 5, 15]
 
+def _log(level, msg):
+    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    print(f"[{ts}] {level:5s} {msg}")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE DADOS — BSD API
+# ══════════════════════════════════════════════════════════════════════════════
+
 def get(path, params=None, _retry=0):
     try:
         r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
         if (r.status_code == 429 or r.status_code >= 500) and _retry < len(_RETRY_DELAYS):
             wait = _RETRY_DELAYS[_retry]
-            print(f"[WARN] HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
+            _log("WARN", f"HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
             return get(path, params, _retry + 1)
         r.raise_for_status()
@@ -33,7 +42,7 @@ def get(path, params=None, _retry=0):
     except requests.exceptions.RequestException as e:
         if _retry < len(_RETRY_DELAYS):
             wait = _RETRY_DELAYS[_retry]
-            print(f"[WARN] request falhou ({e}) — aguardar {wait}s")
+            _log("WARN", f"request falhou ({e}) — aguardar {wait}s")
             time.sleep(wait)
             return get(path, params, _retry + 1)
         raise
@@ -41,13 +50,26 @@ def get(path, params=None, _retry=0):
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-def parse_dt(s):
+def parse_dt(s, context=""):
     if not s:
         return None
-    try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
-    except Exception:
-        return None
+    if isinstance(s, str):
+        s = s.strip()
+        for transform in (
+            lambda x: x.replace("Z", "+00:00"),
+            lambda x: x,
+        ):
+            try:
+                return datetime.fromisoformat(transform(s))
+            except ValueError:
+                pass
+        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+    _log("WARN", f"parse_dt: formato desconhecido '{s}'" + (f" [{context}]" if context else ""))
+    return None
 
 def fetch_all_predictions():
     all_preds = []
@@ -60,12 +82,12 @@ def fetch_all_predictions():
             if not results:
                 break
             all_preds.extend(results)
-            print(f"  [fetch] offset={offset} -> {len(results)} predicoes")
+            _log("INFO", f"offset={offset} -> {len(results)} predicoes")
             if not data.get("next"):
                 break
             offset += limit
         except Exception as e:
-            print(f"  [WARN] predicoes offset={offset} falhou: {e}")
+            _log("WARN", f"predicoes offset={offset} falhou: {e}")
             break
     return all_preds
 
@@ -74,6 +96,10 @@ def fetch_odds(event_id):
         return get(f"/events/{event_id}/odds/comparison/")
     except Exception:
         return None
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE NEGÓCIO — detecção de value
+# ══════════════════════════════════════════════════════════════════════════════
 
 def devig_pinnacle(pin, market, side):
     """Remove a margem Pinnacle antes de calcular edge (de-vig correcto)."""
@@ -90,7 +116,7 @@ def devig_pinnacle(pin, market, side):
             overround = sum(raw)
             # Overround Pinnacle 1X2 típico: 1.02–1.06; fora desse intervalo = dados suspeitos
             if not (1.01 <= overround <= 1.08):
-                print(f"[WARN] overround 1X2 fora do esperado: {overround:.4f}")
+                _log("WARN", f"overround 1X2 fora do esperado: {overround:.4f}")
                 return None
             fair = [p / overround for p in raw]
             return {"HOME": fair[0], "DRAW": fair[1], "AWAY": fair[2]}.get(side)
@@ -104,7 +130,7 @@ def devig_pinnacle(pin, market, side):
         # de-vig completo se ambos os lados disponíveis; senão margem típica Pinnacle 2-outcome ~2.5%
         overround = (implied_yes + 1.0/float(o_no)) if o_no else 1.025
         if o_no and not (1.01 <= overround <= 1.06):
-            print(f"[WARN] overround {market} fora do esperado: {overround:.4f}")
+            _log("WARN", f"overround {market} fora do esperado: {overround:.4f}")
             return None
         return min(implied_yes / overround, 0.99)
     except (TypeError, ZeroDivisionError, ValueError):
@@ -255,6 +281,340 @@ def tip_label(hw, dr, aw, o25, conf):
 
 def has_pred_data(pred):
     return bool(pred and pred.get("home_win") is not None)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE APRESENTAÇÃO — geração de HTML
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _dashboard_css():
+    return """
+:root{
+  --bg:#0d1117;
+  --surface:#161b27;
+  --card:#1c2333;
+  --card-hover:#1f2740;
+  --border:#2d3748;
+  --border-light:#3a4560;
+  --blue:#60a5fa;
+  --blue-dim:#3b82f6;
+  --green:#4ade80;
+  --green-dim:#22c55e;
+  --yellow:#fbbf24;
+  --red:#f87171;
+  --purple:#a78bfa;
+  --text:#f1f5f9;
+  --sub:#94a3b8;
+  --muted:#4a5568;
+  --win-bg:#0d2818;
+  --win-border:#166534;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",system-ui,sans-serif;min-height:100vh}
+
+/* HEADER */
+.header{
+  background:linear-gradient(180deg,#0a0f1e 0%,#0d1117 100%);
+  border-bottom:1px solid var(--border);
+  padding:22px 28px 18px;
+  display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px
+}
+.header-left h1{
+  font-size:1.6rem;font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(90deg,#60a5fa 0%,#a78bfa 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent
+}
+.header-left .meta{font-size:.72rem;color:var(--muted);margin-top:5px}
+.live-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#4ade80;margin-right:5px;
+  animation:pulse 2s infinite
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* STATS STRIP */
+.stats-strip{
+  display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);
+}
+.stat-item{
+  flex:1;padding:16px 12px;text-align:center;
+  border-right:1px solid var(--border);position:relative
+}
+.stat-item:last-child{border-right:none}
+.stat-n{font-size:1.8rem;font-weight:800;line-height:1;letter-spacing:-1px}
+.stat-l{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:4px}
+
+/* FILTERS */
+.filters{
+  padding:14px 28px;background:#0f1420;
+  border-bottom:1px solid var(--border);
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center
+}
+.f-group{display:flex;align-items:center;gap:6px}
+.f-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.filter-select{
+  background:#1c2333;border:1px solid var(--border);color:var(--text);
+  padding:6px 10px;border-radius:8px;font-size:.78rem;cursor:pointer;outline:none;
+  transition:border-color .15s
+}
+.filter-select:focus{border-color:var(--blue-dim)}
+.f-divider{width:1px;height:24px;background:var(--border);margin:0 4px}
+.filter-btn{
+  background:#1c2333;border:1px solid var(--border);color:var(--sub);
+  padding:5px 12px;border-radius:20px;font-size:.75rem;cursor:pointer;
+  transition:all .15s;white-space:nowrap;font-weight:500
+}
+.filter-btn:hover{border-color:var(--border-light);color:var(--text)}
+.filter-btn.active-blue{background:#1e3a5f;border-color:var(--blue);color:var(--blue)}
+.filter-btn.active-green{background:#0d2818;border-color:var(--green-dim);color:var(--green)}
+.filter-btn.active-yellow{background:#2a1f00;border-color:var(--yellow);color:var(--yellow)}
+.filter-btn.active-red{background:#2a0a0a;border-color:var(--red);color:var(--red)}
+.btn-reset{
+  background:transparent;border:1px solid var(--muted);color:var(--muted);
+  padding:5px 10px;border-radius:8px;font-size:.72rem;cursor:pointer;
+  transition:all .15s;margin-left:auto
+}
+.btn-reset:hover{border-color:var(--red);color:var(--red)}
+
+/* CARDS CONTAINER */
+.cards-wrap{padding:20px 28px;max-width:1000px;margin:0 auto}
+.no-results{text-align:center;padding:60px;color:var(--muted);font-size:.9rem}
+
+/* CARD */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:14px;margin-bottom:12px;overflow:hidden;
+  transition:border-color .2s,transform .15s;
+}
+.card:hover{border-color:var(--border-light);transform:translateY(-1px)}
+.card.hidden{display:none}
+.card.finished{border-left:3px solid var(--green-dim)}
+.card.live-now{border-left:3px solid var(--yellow);animation:live-glow 3s infinite}
+@keyframes live-glow{0%,100%{box-shadow:none}50%{box-shadow:0 0 12px #fbbf2420}}
+
+/* CARD TOP */
+.card-top{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 16px 8px;
+  background:linear-gradient(90deg,#161b27 0%,#1a1f30 100%);
+  border-bottom:1px solid var(--border)
+}
+.league-pill{
+  font-size:.71rem;color:var(--sub);font-weight:600;
+  display:flex;align-items:center;gap:5px
+}
+.card-right{display:flex;gap:8px;align-items:center}
+.conf-badge{
+  font-size:.65rem;font-weight:800;padding:3px 9px;
+  border-radius:20px;letter-spacing:.4px;text-transform:uppercase
+}
+.ko-time{font-size:.71rem;color:var(--muted)}
+
+/* CARD BODY */
+.card-body{padding:14px 16px}
+
+/* TEAMS */
+.teams-row{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;margin-bottom:12px
+}
+.team{font-size:.95rem;font-weight:700;flex:1;line-height:1.2}
+.home-team{text-align:left}
+.away-team{text-align:right}
+.score-area{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  min-width:80px;flex-shrink:0
+}
+.predicted-score{
+  background:#1a2040;border:1px solid var(--border-light);
+  border-radius:8px;padding:5px 14px;font-size:1rem;
+  font-weight:800;color:var(--blue);text-align:center
+}
+.score-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.final-score{
+  background:var(--win-bg);border:1px solid var(--win-border);
+  border-radius:8px;padding:5px 14px;font-size:1.1rem;
+  font-weight:800;color:var(--green);text-align:center
+}
+
+/* TIP */
+.tip-row{margin-bottom:12px}
+.tip-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:.75rem;font-weight:600;color:var(--yellow);
+  background:#1f1a00;border:1px solid #3a3000;
+  padding:4px 12px;border-radius:6px
+}
+
+/* PROBS */
+.probs-row{display:flex;gap:6px;margin-bottom:10px}
+.prob-col{
+  flex:1;background:#0f1420;border:1px solid var(--border);
+  border-radius:10px;padding:10px 8px;text-align:center;
+  transition:all .2s
+}
+.prob-col.winner{
+  border-color:var(--blue-dim);background:#0d1d3a;
+}
+.prob-name{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.prob-val{font-size:1.15rem;font-weight:800;color:var(--text)}
+.prob-col.winner .prob-val{color:var(--blue)}
+.prob-bar{height:4px;border-radius:2px;background:var(--border);margin-top:6px}
+.prob-bar-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* EXTRA PILLS */
+.extra-row{display:flex;gap:6px;flex-wrap:wrap}
+.extra-pill{
+  display:flex;align-items:center;gap:5px;
+  background:#0f1420;border:1px solid var(--border);
+  border-radius:8px;padding:5px 11px;font-size:.73rem;color:var(--sub)
+}
+.extra-pill span{font-weight:700;color:var(--text)}
+.extra-pill.hot-green{border-color:#166534;background:#0d2818;color:var(--green)}
+.extra-pill.hot-green span{color:var(--green)}
+.extra-pill.hot-blue{border-color:var(--blue-dim);background:#0d1d3a;color:var(--blue)}
+.extra-pill.hot-blue span{color:var(--blue)}
+
+/* TREBLE BANNER */
+.treble-banner{
+  background:linear-gradient(135deg,#0b1f3a 0%,#0d1e35 100%);
+  border:1px solid #1e4d8c;border-radius:12px;
+  padding:14px 20px;margin:14px 28px 0;max-width:1000px;margin-left:auto;margin-right:auto;
+  box-shadow:0 0 20px #1e4d8c22
+}
+.treble-banner-hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:.82rem;font-weight:700;color:#60a5fa;margin-bottom:10px
+}
+.treble-banner-odds{font-size:.75rem;color:var(--sub);font-weight:400}
+.treble-banner-odds b{color:var(--text)}
+.treble-link{color:#60a5fa;text-decoration:none;font-weight:600}
+.treble-link:hover{text-decoration:underline}
+.tb-pick{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 0;border-bottom:1px solid #1a2540;font-size:.78rem;flex-wrap:wrap
+}
+.tb-pick:last-child{border-bottom:none}
+.tb-pick-num{width:18px;height:18px;border-radius:50%;background:#1e3a5f;color:#60a5fa;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-pick-league{color:var(--muted);min-width:120px;font-size:.68rem}
+.tb-pick-teams{flex:1;font-weight:600;color:var(--text);min-width:140px}
+.tb-pick-mkt{color:var(--sub)}
+.tb-pick-odds{color:var(--muted)}
+
+/* GOAL PREDICTION */
+.gp-row{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:8px;padding:7px 10px;
+  background:#0a0f1a;border:1px solid #1e3050;border-radius:8px
+}
+.gp-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.gp-range{font-size:.85rem;font-weight:800;color:var(--text);flex-shrink:0;min-width:28px}
+.gp-bar-bg{flex:1;height:6px;background:var(--border);border-radius:3px;min-width:40px}
+.gp-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.gp-pct{font-size:.72rem;font-weight:700;flex-shrink:0;min-width:30px;text-align:right}
+.gp-verdict{font-size:.72rem;font-weight:600;flex-shrink:0}
+
+/* FOOTER */
+.tabs{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}
+.tab{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}
+.tab:hover{color:var(--sub)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.footer{
+  text-align:center;padding:28px;font-size:.68rem;
+  color:var(--muted);border-top:1px solid var(--border);
+  margin-top:10px
+}
+
+@media(max-width:580px){
+  .header,.filters,.cards-wrap{padding-left:14px;padding-right:14px}
+  .team{font-size:.85rem}
+  .stats-strip .stat-n{font-size:1.4rem}
+  .filters{gap:5px}
+}
+"""
+
+def _dashboard_js():
+    return """
+let activeConf = null;
+let activeMarket = null;
+const CONF_CLASSES = {"ALTA":"active-green","MÉDIA":"active-yellow","BAIXA":"active-red"};
+const CONF_MAP = {"ALTA":"alta","MÉDIA":"media","BAIXA":"baixa"};
+const MKT_BTNS = ["1x2","o25","btts","xg"];
+const CONF_BTNS = ["alta","media","baixa"];
+
+function getMarketScore(c) {
+  if (!activeMarket) return 0;
+  if (activeMarket === "1x2")  return Math.max(+c.dataset.hw||0, +c.dataset.dr||0, +c.dataset.aw||0);
+  if (activeMarket === "o25")  return +c.dataset.o25||0;
+  if (activeMarket === "btts") return +c.dataset.btts||0;
+  if (activeMarket === "xg")   return +c.dataset.xgtotal||0;
+  return 0;
+}
+
+function passesMarketFilter(c) {
+  if (!activeMarket) return true;
+  if (activeMarket === "xg")   return (+c.dataset.xgtotal||0) > 0;
+  if (activeMarket === "1x2")  return Math.max(+c.dataset.hw||0,+c.dataset.dr||0,+c.dataset.aw||0) >= 61;
+  if (activeMarket === "o25")  return (+c.dataset.o25||0) >= 61;
+  if (activeMarket === "btts") return (+c.dataset.btts||0) >= 61;
+  return true;
+}
+
+function applyFilters() {
+  const league = document.getElementById("f-league").value;
+  const date   = document.getElementById("f-date").value;
+  const container = document.getElementById("cards");
+  const cards = Array.from(document.querySelectorAll(".card"));
+  let visible = [];
+  cards.forEach(c => {
+    const okL = !league || c.dataset.league === league;
+    const okD = !date   || c.dataset.date === date;
+    const okC = !activeConf || c.dataset.conf === activeConf;
+    const okM = passesMarketFilter(c);
+    const show = okL && okD && okC && okM;
+    c.classList.toggle("hidden", !show);
+    if (show) visible.push(c);
+  });
+  if (activeMarket && visible.length > 1) {
+    visible.sort((a,b) => getMarketScore(b) - getMarketScore(a));
+    visible.forEach(c => container.appendChild(c));
+  }
+  document.getElementById("no-results").classList.toggle("hidden", visible.length > 0);
+}
+
+function toggleConf(val) {
+  const prev = activeConf;
+  activeConf = prev === val ? null : val;
+  CONF_BTNS.forEach(b => {
+    const el = document.getElementById("btn-"+b);
+    el.className = "filter-btn";
+  });
+  if (activeConf) {
+    const btn = document.getElementById("btn-"+CONF_MAP[activeConf]);
+    btn.classList.add(CONF_CLASSES[activeConf]);
+  }
+  applyFilters();
+}
+
+function toggleMarket(val) {
+  const prev = activeMarket;
+  activeMarket = prev === val ? null : val;
+  MKT_BTNS.forEach(b => document.getElementById("btn-"+b).className = "filter-btn");
+  if (activeMarket) document.getElementById("btn-"+activeMarket).classList.add("active-blue");
+  applyFilters();
+}
+
+function resetFilters() {
+  document.getElementById("f-league").value = "";
+  document.getElementById("f-date").value   = "";
+  activeConf = null; activeMarket = null;
+  [...CONF_BTNS,...MKT_BTNS].forEach(b => document.getElementById("btn-"+b).className = "filter-btn");
+  const container = document.getElementById("cards");
+  Array.from(document.querySelectorAll(".card"))
+    .sort((a,b) => (a.dataset.date||"") > (b.dataset.date||"") ? 1 : (a.dataset.date||"") < (b.dataset.date||"") ? -1 : (+a.dataset.hour||0) - (+b.dataset.hour||0))
+    .forEach(c => { c.classList.remove("hidden"); container.appendChild(c); });
+  document.getElementById("no-results").classList.add("hidden");
+}
+"""
 
 def match_card_html(enriched):
     m      = enriched["match"]
@@ -448,8 +808,11 @@ def build_html(enriched_list):
         for e in with_data if e["match"].get("event_date")
     ))
 
-    high_conf = sum(1 for e in with_data if confidence_badge(e.get("confidence"))[0] == "ALTA")
-    total     = len(with_data)
+    conf_counts = Counter(confidence_badge(e.get("confidence"))[0] for e in with_data)
+    high_conf   = conf_counts["ALTA"]
+    med_conf    = conf_counts["MÉDIA"]
+    low_conf    = conf_counts["BAIXA"]
+    total       = len(with_data)
 
     league_opts = "".join(f'<option value="{l}">{league_flag(l)} {l}</option>' for l in leagues)
     date_opts   = "".join(f'<option value="{d}">{d}</option>' for d in dates)
@@ -464,250 +827,7 @@ def build_html(enriched_list):
 <title>Matemática Da Bola — {today}</title>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-WE48R4KL96"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());gtag("config","G-WE48R4KL96");</script>
-<style>
-:root{{
-  --bg:#0d1117;
-  --surface:#161b27;
-  --card:#1c2333;
-  --card-hover:#1f2740;
-  --border:#2d3748;
-  --border-light:#3a4560;
-  --blue:#60a5fa;
-  --blue-dim:#3b82f6;
-  --green:#4ade80;
-  --green-dim:#22c55e;
-  --yellow:#fbbf24;
-  --red:#f87171;
-  --purple:#a78bfa;
-  --text:#f1f5f9;
-  --sub:#94a3b8;
-  --muted:#4a5568;
-  --win-bg:#0d2818;
-  --win-border:#166534;
-}}
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",system-ui,sans-serif;min-height:100vh}}
-
-/* HEADER */
-.header{{
-  background:linear-gradient(180deg,#0a0f1e 0%,#0d1117 100%);
-  border-bottom:1px solid var(--border);
-  padding:22px 28px 18px;
-  display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px
-}}
-.header-left h1{{
-  font-size:1.6rem;font-weight:800;letter-spacing:-.5px;
-  background:linear-gradient(90deg,#60a5fa 0%,#a78bfa 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent
-}}
-.header-left .meta{{font-size:.72rem;color:var(--muted);margin-top:5px}}
-.live-dot{{
-  display:inline-block;width:7px;height:7px;border-radius:50%;
-  background:#4ade80;margin-right:5px;
-  animation:pulse 2s infinite
-}}
-@keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:.4}}}}
-
-/* STATS STRIP */
-.stats-strip{{
-  display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);
-}}
-.stat-item{{
-  flex:1;padding:16px 12px;text-align:center;
-  border-right:1px solid var(--border);position:relative
-}}
-.stat-item:last-child{{border-right:none}}
-.stat-n{{font-size:1.8rem;font-weight:800;line-height:1;letter-spacing:-1px}}
-.stat-l{{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:4px}}
-
-/* FILTERS */
-.filters{{
-  padding:14px 28px;background:#0f1420;
-  border-bottom:1px solid var(--border);
-  display:flex;gap:8px;flex-wrap:wrap;align-items:center
-}}
-.f-group{{display:flex;align-items:center;gap:6px}}
-.f-label{{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}}
-.filter-select{{
-  background:#1c2333;border:1px solid var(--border);color:var(--text);
-  padding:6px 10px;border-radius:8px;font-size:.78rem;cursor:pointer;outline:none;
-  transition:border-color .15s
-}}
-.filter-select:focus{{border-color:var(--blue-dim)}}
-.f-divider{{width:1px;height:24px;background:var(--border);margin:0 4px}}
-.filter-btn{{
-  background:#1c2333;border:1px solid var(--border);color:var(--sub);
-  padding:5px 12px;border-radius:20px;font-size:.75rem;cursor:pointer;
-  transition:all .15s;white-space:nowrap;font-weight:500
-}}
-.filter-btn:hover{{border-color:var(--border-light);color:var(--text)}}
-.filter-btn.active-blue{{background:#1e3a5f;border-color:var(--blue);color:var(--blue)}}
-.filter-btn.active-green{{background:#0d2818;border-color:var(--green-dim);color:var(--green)}}
-.filter-btn.active-yellow{{background:#2a1f00;border-color:var(--yellow);color:var(--yellow)}}
-.filter-btn.active-red{{background:#2a0a0a;border-color:var(--red);color:var(--red)}}
-.btn-reset{{
-  background:transparent;border:1px solid var(--muted);color:var(--muted);
-  padding:5px 10px;border-radius:8px;font-size:.72rem;cursor:pointer;
-  transition:all .15s;margin-left:auto
-}}
-.btn-reset:hover{{border-color:var(--red);color:var(--red)}}
-
-/* CARDS CONTAINER */
-.cards-wrap{{padding:20px 28px;max-width:1000px;margin:0 auto}}
-.no-results{{text-align:center;padding:60px;color:var(--muted);font-size:.9rem}}
-
-/* CARD */
-.card{{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:14px;margin-bottom:12px;overflow:hidden;
-  transition:border-color .2s,transform .15s;
-}}
-.card:hover{{border-color:var(--border-light);transform:translateY(-1px)}}
-.card.hidden{{display:none}}
-.card.finished{{border-left:3px solid var(--green-dim)}}
-.card.live-now{{border-left:3px solid var(--yellow);animation:live-glow 3s infinite}}
-@keyframes live-glow{{0%,100%{{box-shadow:none}}50%{{box-shadow:0 0 12px #fbbf2420}}}}
-
-/* CARD TOP */
-.card-top{{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px 16px 8px;
-  background:linear-gradient(90deg,#161b27 0%,#1a1f30 100%);
-  border-bottom:1px solid var(--border)
-}}
-.league-pill{{
-  font-size:.71rem;color:var(--sub);font-weight:600;
-  display:flex;align-items:center;gap:5px
-}}
-.card-right{{display:flex;gap:8px;align-items:center}}
-.conf-badge{{
-  font-size:.65rem;font-weight:800;padding:3px 9px;
-  border-radius:20px;letter-spacing:.4px;text-transform:uppercase
-}}
-.ko-time{{font-size:.71rem;color:var(--muted)}}
-
-/* CARD BODY */
-.card-body{{padding:14px 16px}}
-
-/* TEAMS */
-.teams-row{{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:8px;margin-bottom:12px
-}}
-.team{{font-size:.95rem;font-weight:700;flex:1;line-height:1.2}}
-.home-team{{text-align:left}}
-.away-team{{text-align:right}}
-.score-area{{
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  min-width:80px;flex-shrink:0
-}}
-.predicted-score{{
-  background:#1a2040;border:1px solid var(--border-light);
-  border-radius:8px;padding:5px 14px;font-size:1rem;
-  font-weight:800;color:var(--blue);text-align:center
-}}
-.score-label{{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}}
-.final-score{{
-  background:var(--win-bg);border:1px solid var(--win-border);
-  border-radius:8px;padding:5px 14px;font-size:1.1rem;
-  font-weight:800;color:var(--green);text-align:center
-}}
-
-/* TIP */
-.tip-row{{margin-bottom:12px}}
-.tip-badge{{
-  display:inline-flex;align-items:center;gap:5px;
-  font-size:.75rem;font-weight:600;color:var(--yellow);
-  background:#1f1a00;border:1px solid #3a3000;
-  padding:4px 12px;border-radius:6px
-}}
-
-/* PROBS */
-.probs-row{{display:flex;gap:6px;margin-bottom:10px}}
-.prob-col{{
-  flex:1;background:#0f1420;border:1px solid var(--border);
-  border-radius:10px;padding:10px 8px;text-align:center;
-  transition:all .2s
-}}
-.prob-col.winner{{
-  border-color:var(--blue-dim);background:#0d1d3a;
-}}
-.prob-name{{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}}
-.prob-val{{font-size:1.15rem;font-weight:800;color:var(--text)}}
-.prob-col.winner .prob-val{{color:var(--blue)}}
-.prob-bar{{height:4px;border-radius:2px;background:var(--border);margin-top:6px}}
-.prob-bar-fill{{height:100%;border-radius:2px;transition:width .4s}}
-
-/* EXTRA PILLS */
-.extra-row{{display:flex;gap:6px;flex-wrap:wrap}}
-.extra-pill{{
-  display:flex;align-items:center;gap:5px;
-  background:#0f1420;border:1px solid var(--border);
-  border-radius:8px;padding:5px 11px;font-size:.73rem;color:var(--sub)
-}}
-.extra-pill span{{font-weight:700;color:var(--text)}}
-.extra-pill.hot-green{{border-color:#166534;background:#0d2818;color:var(--green)}}
-.extra-pill.hot-green span{{color:var(--green)}}
-.extra-pill.hot-blue{{border-color:var(--blue-dim);background:#0d1d3a;color:var(--blue)}}
-.extra-pill.hot-blue span{{color:var(--blue)}}
-
-/* TREBLE BANNER */
-.treble-banner{{
-  background:linear-gradient(135deg,#0b1f3a 0%,#0d1e35 100%);
-  border:1px solid #1e4d8c;border-radius:12px;
-  padding:14px 20px;margin:14px 28px 0;max-width:1000px;margin-left:auto;margin-right:auto;
-  box-shadow:0 0 20px #1e4d8c22
-}}
-.treble-banner-hdr{{
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:.82rem;font-weight:700;color:#60a5fa;margin-bottom:10px
-}}
-.treble-banner-odds{{font-size:.75rem;color:var(--sub);font-weight:400}}
-.treble-banner-odds b{{color:var(--text)}}
-.treble-link{{color:#60a5fa;text-decoration:none;font-weight:600}}
-.treble-link:hover{{text-decoration:underline}}
-.tb-pick{{
-  display:flex;align-items:center;gap:10px;
-  padding:6px 0;border-bottom:1px solid #1a2540;font-size:.78rem;flex-wrap:wrap
-}}
-.tb-pick:last-child{{border-bottom:none}}
-.tb-pick-num{{width:18px;height:18px;border-radius:50%;background:#1e3a5f;color:#60a5fa;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}}
-.tb-pick-league{{color:var(--muted);min-width:120px;font-size:.68rem}}
-.tb-pick-teams{{flex:1;font-weight:600;color:var(--text);min-width:140px}}
-.tb-pick-mkt{{color:var(--sub)}}
-.tb-pick-odds{{color:var(--muted)}}
-
-/* GOAL PREDICTION */
-.gp-row{{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  margin-top:8px;padding:7px 10px;
-  background:#0a0f1a;border:1px solid #1e3050;border-radius:8px
-}}
-.gp-lbl{{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}}
-.gp-range{{font-size:.85rem;font-weight:800;color:var(--text);flex-shrink:0;min-width:28px}}
-.gp-bar-bg{{flex:1;height:6px;background:var(--border);border-radius:3px;min-width:40px}}
-.gp-bar-fill{{height:100%;border-radius:3px;transition:width .4s}}
-.gp-pct{{font-size:.72rem;font-weight:700;flex-shrink:0;min-width:30px;text-align:right}}
-.gp-verdict{{font-size:.72rem;font-weight:600;flex-shrink:0}}
-
-/* FOOTER */
-.tabs{{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}}
-.tab{{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}}
-.tab:hover{{color:var(--sub)}}
-.tab.active{{color:var(--blue);border-bottom-color:var(--blue)}}
-.footer{{
-  text-align:center;padding:28px;font-size:.68rem;
-  color:var(--muted);border-top:1px solid var(--border);
-  margin-top:10px
-}}
-
-@media(max-width:580px){{
-  .header,.filters,.cards-wrap{{padding-left:14px;padding-right:14px}}
-  .team{{font-size:.85rem}}
-  .stats-strip .stat-n{{font-size:1.4rem}}
-  .filters{{gap:5px}}
-}}
-</style>
+<style>{_dashboard_css()}</style>
 </head>
 <body>
 <div class="header">
@@ -723,7 +843,7 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
 <div class="stats-strip">
   <div class="stat-item"><div class="stat-n" style="color:var(--blue)">{total}</div><div class="stat-l">Jogos hoje</div></div>
   <div class="stat-item"><div class="stat-n" style="color:var(--green)">{high_conf}</div><div class="stat-l">Alta confiança</div></div>
-  <div class="stat-item"><div class="stat-n" style="color:var(--yellow)">{sum(1 for e in with_data if confidence_badge(e.get("confidence"))[0]=="MÉDIA")}</div><div class="stat-l">Média confiança</div></div>
+  <div class="stat-item"><div class="stat-n" style="color:var(--yellow)">{med_conf}</div><div class="stat-l">Média confiança</div></div>
   <div class="stat-item"><div class="stat-n" style="color:var(--green-dim)">{sum(1 for e in with_data if e.get("result"))}</div><div class="stat-l">Com resultado</div></div>
 </div>
 {banner_html}
@@ -764,90 +884,13 @@ body{{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syst
 <div class="no-results hidden" id="no-results">Nenhum jogo corresponde aos filtros.</div>
 </div>
 <div class="footer">Matemática Da Bola · {today}</div>
-<script>
-let activeConf = null;
-let activeMarket = null;
-const CONF_CLASSES = {{"ALTA":"active-green","MÉDIA":"active-yellow","BAIXA":"active-red"}};
-const CONF_MAP = {{"ALTA":"alta","MÉDIA":"media","BAIXA":"baixa"}};
-const MKT_BTNS = ["1x2","o25","btts","xg"];
-const CONF_BTNS = ["alta","media","baixa"];
-
-function getMarketScore(c) {{
-  if (!activeMarket) return 0;
-  if (activeMarket === "1x2")  return Math.max(+c.dataset.hw||0, +c.dataset.dr||0, +c.dataset.aw||0);
-  if (activeMarket === "o25")  return +c.dataset.o25||0;
-  if (activeMarket === "btts") return +c.dataset.btts||0;
-  if (activeMarket === "xg")   return +c.dataset.xgtotal||0;
-  return 0;
-}}
-
-function passesMarketFilter(c) {{
-  if (!activeMarket) return true;
-  if (activeMarket === "xg")   return (+c.dataset.xgtotal||0) > 0;
-  if (activeMarket === "1x2")  return Math.max(+c.dataset.hw||0,+c.dataset.dr||0,+c.dataset.aw||0) >= 61;
-  if (activeMarket === "o25")  return (+c.dataset.o25||0) >= 61;
-  if (activeMarket === "btts") return (+c.dataset.btts||0) >= 61;
-  return true;
-}}
-
-function applyFilters() {{
-  const league = document.getElementById("f-league").value;
-  const date   = document.getElementById("f-date").value;
-  const container = document.getElementById("cards");
-  const cards = Array.from(document.querySelectorAll(".card"));
-  let visible = [];
-  cards.forEach(c => {{
-    const okL = !league || c.dataset.league === league;
-    const okD = !date   || c.dataset.date === date;
-    const okC = !activeConf || c.dataset.conf === activeConf;
-    const okM = passesMarketFilter(c);
-    const show = okL && okD && okC && okM;
-    c.classList.toggle("hidden", !show);
-    if (show) visible.push(c);
-  }});
-  if (activeMarket && visible.length > 1) {{
-    visible.sort((a,b) => getMarketScore(b) - getMarketScore(a));
-    visible.forEach(c => container.appendChild(c));
-  }}
-  document.getElementById("no-results").classList.toggle("hidden", visible.length > 0);
-}}
-
-function toggleConf(val) {{
-  const prev = activeConf;
-  activeConf = prev === val ? null : val;
-  CONF_BTNS.forEach(b => {{
-    const el = document.getElementById("btn-"+b);
-    el.className = "filter-btn";
-  }});
-  if (activeConf) {{
-    const btn = document.getElementById("btn-"+CONF_MAP[activeConf]);
-    btn.classList.add(CONF_CLASSES[activeConf]);
-  }}
-  applyFilters();
-}}
-
-function toggleMarket(val) {{
-  const prev = activeMarket;
-  activeMarket = prev === val ? null : val;
-  MKT_BTNS.forEach(b => document.getElementById("btn-"+b).className = "filter-btn");
-  if (activeMarket) document.getElementById("btn-"+activeMarket).classList.add("active-blue");
-  applyFilters();
-}}
-
-function resetFilters() {{
-  document.getElementById("f-league").value = "";
-  document.getElementById("f-date").value   = "";
-  activeConf = null; activeMarket = null;
-  [...CONF_BTNS,...MKT_BTNS].forEach(b => document.getElementById("btn-"+b).className = "filter-btn");
-  const container = document.getElementById("cards");
-  Array.from(document.querySelectorAll(".card"))
-    .sort((a,b) => (a.dataset.date||"") > (b.dataset.date||"") ? 1 : (a.dataset.date||"") < (b.dataset.date||"") ? -1 : (+a.dataset.hour||0) - (+b.dataset.hour||0))
-    .forEach(c => {{ c.classList.remove("hidden"); container.appendChild(c); }});
-  document.getElementById("no-results").classList.add("hidden");
-}}
-</script>
+<script>{_dashboard_js()}</script>
 </body>
 </html>'''
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CAMADA DE NOTIFICAÇÕES — Telegram
+# ══════════════════════════════════════════════════════════════════════════════
 
 def escape_md(s):
     """Escapa caracteres especiais do Markdown v1 do Telegram em valores dinâmicos."""
@@ -855,7 +898,6 @@ def escape_md(s):
         s = str(s).replace(ch, f'\\{ch}')
     return s
 
-# ── Telegram ──────────────────────────────────────────────────────────────────
 def send_telegram(enriched_list):
     today  = today_str()
     blocks = []
@@ -977,21 +1019,24 @@ def send_telegram(enriched_list):
                 time.sleep(5)
                 _tg_send(text, _retry + 1)
             else:
-                print(f"[WARN] telegram falhou após {_retry+1} tentativas: {e}")
+                _log("WARN", f"telegram falhou após {_retry+1} tentativas: {e}")
 
     header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
     _tg_send(header)
     for block in blocks:
         _tg_send(block)
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# PONTO DE ENTRADA
+# ══════════════════════════════════════════════════════════════════════════════
+
 def main():
     today = today_str()
-    print(f"[dashboard] {today} — a buscar predicoes...")
+    _log("INFO", f"{today} — a buscar predicoes...")
 
     # 1. Buscar todas as predicoes do dia de uma vez (paginadas)
     all_preds = fetch_all_predictions()
-    print(f"[dashboard] {len(all_preds)} predicoes encontradas")
+    _log("INFO", f"{len(all_preds)} predicoes encontradas")
 
     # 2. Para cada predicao, buscar odds e montar enriched
     enriched_list = []
@@ -1038,7 +1083,7 @@ def main():
             home = m.get("home_team", "?")
             away = m.get("away_team", "?")
             league = m.get("_league_name", "")
-            print(f"  -> {home} vs {away} [{league}]")
+            _log("INFO", f"{home} vs {away} [{league}]")
             conf = pred.get("model", {}).get("confidence")
 
             # Resultado final se o jogo já terminou
@@ -1052,7 +1097,7 @@ def main():
                     result = {"home": hs, "away": as_}
         except Exception as e:
             failed_count += 1
-            print(f"[WARN] evento {eid} falhou — a saltar: {e}")
+            _log("WARN", f"evento {eid} falhou — a saltar: {e}")
             continue
 
         enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
@@ -1062,7 +1107,7 @@ def main():
 
     today_count = sum(1 for e in enriched_list if e["match"].get("event_date","")[:10] == today)
     other_count = len(enriched_list) - today_count
-    print(f"[dashboard] {len(enriched_list)} jogos OK, {failed_count} falharam ({today_count} hoje, {other_count} outros dias)")
+    _log("INFO", f"{len(enriched_list)} jogos OK, {failed_count} falharam ({today_count} hoje, {other_count} outros dias)")
 
     if all_preds and len(enriched_list) < len(all_preds) * 0.5:
         raise RuntimeError(f"Demasiadas falhas: {failed_count}/{len(all_preds)} eventos — a abortar para evitar dashboard vazio")
@@ -1073,10 +1118,10 @@ def main():
     with open(_tmp, "w", encoding="utf-8") as f:
         f.write(html)
     os.replace(_tmp, "docs/dashboard.html")
-    print("[dashboard] docs/dashboard.html guardado")
+    _log("INFO", "docs/dashboard.html guardado")
 
     send_telegram(enriched_list)
-    print("[dashboard] Telegram enviado ✓")
+    _log("INFO", "Telegram enviado ✓")
 
 if __name__ == "__main__":
     main()
