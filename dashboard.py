@@ -18,31 +18,22 @@ TREBLES_FILE = "docs/trebles.json"
 BASE    = "https://sports.bzzoiro.com/api/v2"
 HEADERS = {"Authorization": f"Token {BSD_KEY}"}
 
-# ── Constantes de retry ───────────────────────────────────────────────────────
-MAX_RETRIES   = 3
-RETRY_DELAYS  = [1, 3, 10]   # segundos entre tentativas
-RATE_LIMIT_DELAY = 0.5       # pausa base entre pedidos normais
+_RETRY_DELAYS = [2, 5, 15]
 
 def get(path, params=None, _retry=0):
-    """GET com retry automático: backoff em 429 (rate limit) e 5xx (erro servidor)."""
     try:
         r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
-        if r.status_code == 429 and _retry < MAX_RETRIES:
-            wait = RETRY_DELAYS[_retry]
-            print(f"  [RATE_LIMIT] 429 em {path} — aguarda {wait}s (tentativa {_retry+1}/{MAX_RETRIES})")
-            time.sleep(wait)
-            return get(path, params, _retry + 1)
-        if r.status_code >= 500 and _retry < MAX_RETRIES:
-            wait = RETRY_DELAYS[_retry]
-            print(f"  [SERVER_ERR] {r.status_code} em {path} — aguarda {wait}s (tentativa {_retry+1}/{MAX_RETRIES})")
+        if (r.status_code == 429 or r.status_code >= 500) and _retry < len(_RETRY_DELAYS):
+            wait = _RETRY_DELAYS[_retry]
+            print(f"[WARN] HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
             return get(path, params, _retry + 1)
         r.raise_for_status()
         return r.json()
-    except requests.exceptions.Timeout:
-        if _retry < MAX_RETRIES:
-            wait = RETRY_DELAYS[_retry]
-            print(f"  [TIMEOUT] {path} — aguarda {wait}s (tentativa {_retry+1}/{MAX_RETRIES})")
+    except requests.exceptions.RequestException as e:
+        if _retry < len(_RETRY_DELAYS):
+            wait = _RETRY_DELAYS[_retry]
+            print(f"[WARN] request falhou ({e}) — aguardar {wait}s")
             time.sleep(wait)
             return get(path, params, _retry + 1)
         raise
@@ -97,6 +88,10 @@ def devig_pinnacle(pin, market, side):
                 return None
             raw = [1/float(o_h), 1/float(o_d), 1/float(o_a)]
             overround = sum(raw)
+            # Overround Pinnacle 1X2 típico: 1.02–1.06; fora desse intervalo = dados suspeitos
+            if not (1.01 <= overround <= 1.08):
+                print(f"[WARN] overround 1X2 fora do esperado: {overround:.4f}")
+                return None
             fair = [p / overround for p in raw]
             return {"HOME": fair[0], "DRAW": fair[1], "AWAY": fair[2]}.get(side)
         if market == "Over2.5":
@@ -108,7 +103,10 @@ def devig_pinnacle(pin, market, side):
         implied_yes = 1.0 / float(o_yes)
         # de-vig completo se ambos os lados disponíveis; senão margem típica Pinnacle 2-outcome ~2.5%
         overround = (implied_yes + 1.0/float(o_no)) if o_no else 1.025
-        return implied_yes / overround
+        if o_no and not (1.01 <= overround <= 1.06):
+            print(f"[WARN] overround {market} fora do esperado: {overround:.4f}")
+            return None
+        return min(implied_yes / overround, 0.99)
     except (TypeError, ZeroDivisionError, ValueError):
         return None
 
@@ -130,6 +128,8 @@ def detect_value(pred, odds):
         ("Over2.5", "OVER",  pred.get("over_2_5"),  pin.get("over_2_5")),
         ("BTTS",    "YES",   pred.get("btts_yes"),  pin.get("btts_yes")),
     ]
+    # Thresholds diferenciados: 1X2 mais difícil de bater (Pinnacle sharp em 1X2)
+    _EDGE_MIN = {"1X2": 0.07, "Over2.5": 0.05, "BTTS": 0.06}
     values = []
     for market, side, ml_prob, pin_odds in mappings:
         if ml_prob is None:
@@ -140,7 +140,7 @@ def detect_value(pred, odds):
             if fair_p is None:
                 continue
             edge = ml_p - fair_p
-            if edge > 0.05:
+            if edge > _EDGE_MIN.get(market, 0.06):
                 values.append({
                     "market":    market,
                     "side":      side,
@@ -967,20 +967,22 @@ def send_telegram(enriched_list):
 
     # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
-    header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
-    try:
-        requests.post(url, json={"chat_id": TG_CHAT, "text": header, "parse_mode": "Markdown"}, timeout=10)
-    except Exception as e:
-        print(f"[WARN] telegram header falhou: {e}")
-    for block in blocks:
+
+    def _tg_send(text, _retry=0):
         try:
-            requests.post(
-                url,
-                json={"chat_id": TG_CHAT, "text": block, "parse_mode": "Markdown"},
-                timeout=10,
-            )
+            r = requests.post(url, json={"chat_id": TG_CHAT, "text": text, "parse_mode": "Markdown"}, timeout=10)
+            r.raise_for_status()
         except Exception as e:
-            print(f"[WARN] telegram block falhou: {e}")
+            if _retry < 2:
+                time.sleep(5)
+                _tg_send(text, _retry + 1)
+            else:
+                print(f"[WARN] telegram falhou após {_retry+1} tentativas: {e}")
+
+    header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
+    _tg_send(header)
+    for block in blocks:
+        _tg_send(block)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
@@ -993,6 +995,7 @@ def main():
 
     # 2. Para cada predicao, buscar odds e montar enriched
     enriched_list = []
+    failed_count  = 0
     seen = set()
     for pred in all_preds:
         event = pred.get("event", {})
@@ -1001,57 +1004,56 @@ def main():
             continue
         seen.add(eid)
 
-        # Construir estrutura de match compativel com o resto do codigo
-        m = {
-            "id":           eid,
-            "home_team":    event.get("home_team"),
-            home   = m.get("home_team", "?")
-        away   = m.get("away_team", "?")
-        league = m.get("_league_name", "")
-
         try:
+            # Construir estrutura de match compativel com o resto do codigo
+            m = {
+                "id":           eid,
+                "home_team":    event.get("home_team"),
+                "away_team":    event.get("away_team"),
+                "event_date":   event.get("event_date"),
+                "_league_name": event.get("league_name", "?"),
+            }
+
+            # Normalizar pred para o formato esperado pelo match_card_html
+            markets = pred.get("markets", {})
+            mr  = markets.get("match_result", {})
+            xg  = markets.get("expected_goals", {})
+            ou  = markets.get("over_under", {})
+            bt  = markets.get("btts", {})
+            sc  = markets.get("score", {})
+
+            pred_norm = {
+                "home_win":  mr.get("prob_home", 0) / 100 if mr.get("prob_home") else None,
+                "draw":      mr.get("prob_draw", 0) / 100 if mr.get("prob_draw") else None,
+                "away_win":  mr.get("prob_away", 0) / 100 if mr.get("prob_away") else None,
+                "over_2_5":  ou.get("prob_over_25", 0) / 100 if ou.get("prob_over_25") else None,
+                "btts_yes":  bt.get("prob_yes", 0) / 100 if bt.get("prob_yes") else None,
+                "home_xg":   round(xg.get("home", 0), 2) if xg.get("home") else None,
+                "away_xg":   round(xg.get("away", 0), 2) if xg.get("away") else None,
+                "most_likely_score": sc.get("most_likely"),
+            }
+
             odds = fetch_odds(eid)
+            time.sleep(0.5)
+            home = m.get("home_team", "?")
+            away = m.get("away_team", "?")
+            league = m.get("_league_name", "")
+            print(f"  -> {home} vs {away} [{league}]")
+            conf = pred.get("model", {}).get("confidence")
+
+            # Resultado final se o jogo já terminou
+            result = None
+            event_status = event.get("status", "notstarted")
+            m["status"] = event_status
+            if event_status in ("finished", "inprogress", "live", "halftime"):
+                hs = event.get("home_score")
+                as_ = event.get("away_score")
+                if hs is not None and as_ is not None:
+                    result = {"home": hs, "away": as_}
         except Exception as e:
-            print(f"  [WARN] odds para {home} vs {away} falharam: {e} — continua sem odds")
-            odds = None
-
-        time.sleep(RATE_LIMIT_DELAY)
-        print(f"  -> {home} vs {away} [{league}]")
-        conf = pred.get("model", {}).get("confidence")
-
-        # Resultado final se o jogo já terminou
-        result = None
-        event_status = event.get("status", "notstarted")
-        m["status"] = event_status
-        if event_status in ("finished", "inprogress", "live", "halftime"):
-            hs  = event.get("home_score")
-            as_ = event.get("away_score")
-            if hs is not None and as_ is not None:
-                result = {"home": hs, "away": as_}
-
-        enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
-            "home_xg":   round(xg.get("home", 0), 2) if xg.get("home") else None,
-            "away_xg":   round(xg.get("away", 0), 2) if xg.get("away") else None,
-            "most_likely_score": sc.get("most_likely"),
-        }
-
-        odds = fetch_odds(eid)
-        time.sleep(0.2)
-        home = m.get("home_team", "?")
-        away = m.get("away_team", "?")
-        league = m.get("_league_name", "")
-        print(f"  -> {home} vs {away} [{league}]")
-        conf = pred.get("model", {}).get("confidence")
-
-        # Resultado final se o jogo já terminou
-        result = None
-        event_status = event.get("status", "notstarted")
-        m["status"] = event_status
-        if event_status in ("finished", "inprogress", "live", "halftime"):
-            hs = event.get("home_score")
-            as_ = event.get("away_score")
-            if hs is not None and as_ is not None:
-                result = {"home": hs, "away": as_}
+            failed_count += 1
+            print(f"[WARN] evento {eid} falhou — a saltar: {e}")
+            continue
 
         enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
 
@@ -1060,7 +1062,10 @@ def main():
 
     today_count = sum(1 for e in enriched_list if e["match"].get("event_date","")[:10] == today)
     other_count = len(enriched_list) - today_count
-    print(f"[dashboard] {len(enriched_list)} jogos com predicao ({today_count} hoje, {other_count} outros dias)")
+    print(f"[dashboard] {len(enriched_list)} jogos OK, {failed_count} falharam ({today_count} hoje, {other_count} outros dias)")
+
+    if all_preds and len(enriched_list) < len(all_preds) * 0.5:
+        raise RuntimeError(f"Demasiadas falhas: {failed_count}/{len(all_preds)} eventos — a abortar para evitar dashboard vazio")
 
     html = build_html(enriched_list)
     os.makedirs("docs", exist_ok=True)

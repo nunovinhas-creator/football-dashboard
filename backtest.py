@@ -27,10 +27,25 @@ EMAIL_TO     = "nunovinhas@gmail.com"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def get(path, params=None):
-    r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
-    r.raise_for_status()
-    return r.json()
+_RETRY_DELAYS = [2, 5, 15]
+
+def get(path, params=None, _retry=0):
+    try:
+        r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
+        if r.status_code in (429, 503) and _retry < len(_RETRY_DELAYS):
+            wait = _RETRY_DELAYS[_retry]
+            print(f"[WARN] HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
+            time.sleep(wait)
+            return get(path, params, _retry + 1)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.RequestException as e:
+        if _retry < len(_RETRY_DELAYS):
+            wait = _RETRY_DELAYS[_retry]
+            print(f"[WARN] request falhou ({e}) — aguardar {wait}s")
+            time.sleep(wait)
+            return get(path, params, _retry + 1)
+        raise
 
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
