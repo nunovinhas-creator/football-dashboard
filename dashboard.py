@@ -18,10 +18,34 @@ TREBLES_FILE = "docs/trebles.json"
 BASE    = "https://sports.bzzoiro.com/api/v2"
 HEADERS = {"Authorization": f"Token {BSD_KEY}"}
 
-def get(path, params=None):
-    r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
-    r.raise_for_status()
-    return r.json()
+# ── Constantes de retry ───────────────────────────────────────────────────────
+MAX_RETRIES   = 3
+RETRY_DELAYS  = [1, 3, 10]   # segundos entre tentativas
+RATE_LIMIT_DELAY = 0.5       # pausa base entre pedidos normais
+
+def get(path, params=None, _retry=0):
+    """GET com retry automático: backoff em 429 (rate limit) e 5xx (erro servidor)."""
+    try:
+        r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
+        if r.status_code == 429 and _retry < MAX_RETRIES:
+            wait = RETRY_DELAYS[_retry]
+            print(f"  [RATE_LIMIT] 429 em {path} — aguarda {wait}s (tentativa {_retry+1}/{MAX_RETRIES})")
+            time.sleep(wait)
+            return get(path, params, _retry + 1)
+        if r.status_code >= 500 and _retry < MAX_RETRIES:
+            wait = RETRY_DELAYS[_retry]
+            print(f"  [SERVER_ERR] {r.status_code} em {path} — aguarda {wait}s (tentativa {_retry+1}/{MAX_RETRIES})")
+            time.sleep(wait)
+            return get(path, params, _retry + 1)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.Timeout:
+        if _retry < MAX_RETRIES:
+            wait = RETRY_DELAYS[_retry]
+            print(f"  [TIMEOUT] {path} — aguarda {wait}s (tentativa {_retry+1}/{MAX_RETRIES})")
+            time.sleep(wait)
+            return get(path, params, _retry + 1)
+        raise
 
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -981,25 +1005,31 @@ def main():
         m = {
             "id":           eid,
             "home_team":    event.get("home_team"),
-            "away_team":    event.get("away_team"),
-            "event_date":   event.get("event_date"),
-            "_league_name": event.get("league_name", "?"),
-        }
+            home   = m.get("home_team", "?")
+        away   = m.get("away_team", "?")
+        league = m.get("_league_name", "")
 
-        # Normalizar pred para o formato esperado pelo match_card_html
-        markets = pred.get("markets", {})
-        mr  = markets.get("match_result", {})
-        xg  = markets.get("expected_goals", {})
-        ou  = markets.get("over_under", {})
-        bt  = markets.get("btts", {})
-        sc  = markets.get("score", {})
+        try:
+            odds = fetch_odds(eid)
+        except Exception as e:
+            print(f"  [WARN] odds para {home} vs {away} falharam: {e} — continua sem odds")
+            odds = None
 
-        pred_norm = {
-            "home_win":  mr.get("prob_home", 0) / 100 if mr.get("prob_home") else None,
-            "draw":      mr.get("prob_draw", 0) / 100 if mr.get("prob_draw") else None,
-            "away_win":  mr.get("prob_away", 0) / 100 if mr.get("prob_away") else None,
-            "over_2_5":  ou.get("prob_over_25", 0) / 100 if ou.get("prob_over_25") else None,
-            "btts_yes":  bt.get("prob_yes", 0) / 100 if bt.get("prob_yes") else None,
+        time.sleep(RATE_LIMIT_DELAY)
+        print(f"  -> {home} vs {away} [{league}]")
+        conf = pred.get("model", {}).get("confidence")
+
+        # Resultado final se o jogo já terminou
+        result = None
+        event_status = event.get("status", "notstarted")
+        m["status"] = event_status
+        if event_status in ("finished", "inprogress", "live", "halftime"):
+            hs  = event.get("home_score")
+            as_ = event.get("away_score")
+            if hs is not None and as_ is not None:
+                result = {"home": hs, "away": as_}
+
+        enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
             "home_xg":   round(xg.get("home", 0), 2) if xg.get("home") else None,
             "away_xg":   round(xg.get("away", 0), 2) if xg.get("away") else None,
             "most_likely_score": sc.get("most_likely"),
