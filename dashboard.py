@@ -55,14 +55,10 @@ def parse_dt(s, context=""):
         return None
     if isinstance(s, str):
         s = s.strip()
-        for transform in (
-            lambda x: x.replace("Z", "+00:00"),
-            lambda x: x,
-        ):
-            try:
-                return datetime.fromisoformat(transform(s))
-            except ValueError:
-                pass
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            pass
         for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
             try:
                 return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
@@ -136,6 +132,8 @@ def devig_pinnacle(pin, market, side):
     except (TypeError, ZeroDivisionError, ValueError):
         return None
 
+_EDGE_MIN = {"1X2": 0.07, "Over2.5": 0.05, "BTTS": 0.06}
+
 def detect_value(pred, odds):
     if not pred or not odds:
         return []
@@ -154,8 +152,6 @@ def detect_value(pred, odds):
         ("Over2.5", "OVER",  pred.get("over_2_5"),  pin.get("over_2_5")),
         ("BTTS",    "YES",   pred.get("btts_yes"),  pin.get("btts_yes")),
     ]
-    # Thresholds diferenciados: 1X2 mais difícil de bater (Pinnacle sharp em 1X2)
-    _EDGE_MIN = {"1X2": 0.07, "Over2.5": 0.05, "BTTS": 0.06}
     values = []
     for market, side, ml_prob, pin_odds in mappings:
         if ml_prob is None:
@@ -982,8 +978,6 @@ def send_telegram(enriched_list):
             continue
         vals = detect_value(e["pred"], e["odds"])
         for v in vals:
-            if v["edge"] < 0.07:        # só edge > 7%
-                continue
             if v["market"] not in ("BTTS", "Over2.5"):  # mercados calibrados
                 continue
             m = e["match"]
@@ -1079,7 +1073,6 @@ def main():
             }
 
             odds = fetch_odds(eid)
-            time.sleep(0.5)
             home = m.get("home_team", "?")
             away = m.get("away_team", "?")
             league = m.get("_league_name", "")
@@ -1099,6 +1092,8 @@ def main():
             failed_count += 1
             _log("WARN", f"evento {eid} falhou — a saltar: {e}")
             continue
+        finally:
+            time.sleep(0.5)
 
         enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
 
@@ -1109,8 +1104,8 @@ def main():
     other_count = len(enriched_list) - today_count
     _log("INFO", f"{len(enriched_list)} jogos OK, {failed_count} falharam ({today_count} hoje, {other_count} outros dias)")
 
-    if all_preds and len(enriched_list) < len(all_preds) * 0.5:
-        raise RuntimeError(f"Demasiadas falhas: {failed_count}/{len(all_preds)} eventos — a abortar para evitar dashboard vazio")
+    if seen and len(enriched_list) < len(seen) * 0.5:
+        raise RuntimeError(f"Demasiadas falhas: {failed_count}/{len(seen)} eventos únicos — a abortar para evitar dashboard vazio")
 
     html = build_html(enriched_list)
     os.makedirs("docs", exist_ok=True)

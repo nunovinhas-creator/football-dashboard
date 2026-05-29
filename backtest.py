@@ -38,7 +38,7 @@ def _log(level, msg):
 def get(path, params=None, _retry=0):
     try:
         r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
-        if r.status_code in (429, 503) and _retry < len(_RETRY_DELAYS):
+        if (r.status_code == 429 or r.status_code >= 500) and _retry < len(_RETRY_DELAYS):
             wait = _RETRY_DELAYS[_retry]
             _log("WARN", f"HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
@@ -61,14 +61,10 @@ def parse_dt(s, context=""):
         return None
     if isinstance(s, str):
         s = s.strip()
-        for transform in (
-            lambda x: x.replace("Z", "+00:00"),
-            lambda x: x,
-        ):
-            try:
-                return datetime.fromisoformat(transform(s))
-            except ValueError:
-                pass
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            pass
         for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
             try:
                 return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
@@ -1033,7 +1029,7 @@ def treble_section_html(trebles_data):
     today_diag = trebles_data.get("today_diag")
     today      = today_str()
 
-    today_treble = next((t for t in pending if t.get("status") == "pending"), None)
+    today_treble = next((t for t in pending if t.get("date") == today), None)
 
     mkt_label = {
         "BTTS":  "🔁 BTTS",
