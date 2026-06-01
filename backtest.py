@@ -600,36 +600,36 @@ def _calibration_svg(calib_data):
     out = [f'<svg viewBox="0 0 {W} {H}" width="100%" style="display:block;max-width:{W}px">']
     for pct in [50, 65, 80]:
         y = sy(pct)
-        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1" stroke-dasharray="4,3"/>')
-        out.append(f'<text x="{ML-5}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{pct}%</text>')
-    out.append(f'<line x1="{ML}" y1="{MT}" x2="{ML}" y2="{MT+ph}" stroke="#2d3748" stroke-width="1"/>')
+        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="oklch(78% 0 0 / 0.12)" stroke-width="1" stroke-dasharray="4,3"/>')
+        out.append(f'<text x="{ML-5}" y="{y+3:.0f}" fill="oklch(52% 0 0)" font-size="10" text-anchor="end">{pct}%</text>')
+    out.append(f'<line x1="{ML}" y1="{MT}" x2="{ML}" y2="{MT+ph}" stroke="oklch(52% 0 0 / 0.3)" stroke-width="1"/>')
     if n >= 2:
         x0 = ML + slot * 0.5
         x1 = ML + slot * (n - 0.5)
         y0 = sy(calib_data[0]["predicted"])
         y1 = sy(calib_data[-1]["predicted"])
-        out.append(f'<line x1="{x0:.0f}" y1="{y0:.0f}" x2="{x1:.0f}" y2="{y1:.0f}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
+        out.append(f'<line x1="{x0:.0f}" y1="{y0:.0f}" x2="{x1:.0f}" y2="{y1:.0f}" stroke="oklch(58% 0.15 35)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
     for i, d in enumerate(calib_data):
         cx  = ML + slot * (i + 0.5)
         bh  = max(2, d["actual"] / 100 * ph)
         by  = MT + ph - bh
-        col = "#4ade80" if d["actual"] >= d["predicted"] else "#f87171"
+        col = "oklch(70% 0.12 188)" if d["actual"] >= d["predicted"] else "oklch(58% 0.15 35)"
         out.append(f'<rect x="{cx - bw/2:.0f}" y="{by:.0f}" width="{bw:.0f}" height="{bh:.0f}" fill="{col}" opacity="0.75" rx="2"/>')
         ci_lo_y = sy(d["ci_lo"])
         ci_hi_y = sy(d["ci_hi"])
-        out.append(f'<line x1="{cx:.0f}" y1="{ci_lo_y:.0f}" x2="{cx:.0f}" y2="{ci_hi_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
-        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_lo_y:.0f}" x2="{cx+4:.0f}" y2="{ci_lo_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
-        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_hi_y:.0f}" x2="{cx+4:.0f}" y2="{ci_hi_y:.0f}" stroke="#94a3b8" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx:.0f}" y1="{ci_lo_y:.0f}" x2="{cx:.0f}" y2="{ci_hi_y:.0f}" stroke="oklch(62% 0 0)" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_lo_y:.0f}" x2="{cx+4:.0f}" y2="{ci_lo_y:.0f}" stroke="oklch(62% 0 0)" stroke-width="1.5"/>')
+        out.append(f'<line x1="{cx-4:.0f}" y1="{ci_hi_y:.0f}" x2="{cx+4:.0f}" y2="{ci_hi_y:.0f}" stroke="oklch(62% 0 0)" stroke-width="1.5"/>')
         out.append(f'<circle cx="{cx:.0f}" cy="{sy(d["actual"]):.0f}" r="3.5" fill="{col}"/>')
         out.append(f'<text x="{cx:.0f}" y="{by-5:.0f}" fill="{col}" font-size="9" text-anchor="middle" font-weight="700">{d["actual"]:.0f}%</text>')
-        out.append(f'<text x="{cx:.0f}" y="{MT+ph+14}" fill="#4a5568" font-size="9" text-anchor="middle">{d["label"]}</text>')
-        out.append(f'<text x="{cx:.0f}" y="{MT+ph+26}" fill="#4a5568" font-size="9" text-anchor="middle">n={d["n"]}</text>')
-    out.append(f'<circle cx="{ML+4}" cy="{MT+8}" r="4" fill="#4ade80" opacity="0.8"/>')
-    out.append(f'<text x="{ML+12}" y="{MT+12}" fill="#4ade80" font-size="9">Acima do previsto</text>')
-    out.append(f'<circle cx="{ML+110}" cy="{MT+8}" r="4" fill="#f87171" opacity="0.8"/>')
-    out.append(f'<text x="{ML+118}" y="{MT+12}" fill="#f87171" font-size="9">Abaixo do previsto</text>')
-    out.append(f'<line x1="{ML+210}" y1="{MT+8}" x2="{ML+226}" y2="{MT+8}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
-    out.append(f'<text x="{ML+230}" y="{MT+12}" fill="#f87171" font-size="9">Calibração perfeita</text>')
+        out.append(f'<text x="{cx:.0f}" y="{MT+ph+14}" fill="oklch(52% 0 0)" font-size="9" text-anchor="middle">{d["label"]}</text>')
+        out.append(f'<text x="{cx:.0f}" y="{MT+ph+26}" fill="oklch(52% 0 0)" font-size="9" text-anchor="middle">n={d["n"]}</text>')
+    out.append(f'<circle cx="{ML+4}" cy="{MT+8}" r="4" fill="oklch(70% 0.12 188)" opacity="0.8"/>')
+    out.append(f'<text x="{ML+12}" y="{MT+12}" fill="oklch(70% 0.12 188)" font-size="9">Acima do previsto</text>')
+    out.append(f'<circle cx="{ML+110}" cy="{MT+8}" r="4" fill="oklch(58% 0.15 35)" opacity="0.8"/>')
+    out.append(f'<text x="{ML+118}" y="{MT+12}" fill="oklch(58% 0.15 35)" font-size="9">Abaixo do previsto</text>')
+    out.append(f'<line x1="{ML+210}" y1="{MT+8}" x2="{ML+226}" y2="{MT+8}" stroke="oklch(58% 0.15 35)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.7"/>')
+    out.append(f'<text x="{ML+230}" y="{MT+12}" fill="oklch(58% 0.15 35)" font-size="9">Calibração perfeita</text>')
     out.append('</svg>')
     return "".join(out)
 
@@ -708,32 +708,32 @@ def _scatter_svg(scatter):
     # grid + labels
     for i in range(0, 8):
         x, y = sx(i), sy(i)
-        out.append(f'<line x1="{x:.0f}" y1="{MT}" x2="{x:.0f}" y2="{MT+ph}" stroke="#1e2a3a" stroke-width="1"/>')
-        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1"/>')
+        out.append(f'<line x1="{x:.0f}" y1="{MT}" x2="{x:.0f}" y2="{MT+ph}" stroke="oklch(78% 0 0 / 0.12)" stroke-width="1"/>')
+        out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="oklch(78% 0 0 / 0.12)" stroke-width="1"/>')
         if i > 0:
-            out.append(f'<text x="{x:.0f}" y="{MT+ph+14}" fill="#4a5568" font-size="10" text-anchor="middle">{i}</text>')
-            out.append(f'<text x="{ML-6}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{i}</text>')
+            out.append(f'<text x="{x:.0f}" y="{MT+ph+14}" fill="oklch(52% 0 0)" font-size="10" text-anchor="middle">{i}</text>')
+            out.append(f'<text x="{ML-6}" y="{y+3:.0f}" fill="oklch(52% 0 0)" font-size="10" text-anchor="end">{i}</text>')
     # Over 2.5 dashed threshold
     x25, y25 = sx(2.5), sy(2.5)
-    out.append(f'<line x1="{x25:.0f}" y1="{MT}" x2="{x25:.0f}" y2="{MT+ph}" stroke="#4a5568" stroke-width="1" stroke-dasharray="4,3"/>')
-    out.append(f'<line x1="{ML}" y1="{y25:.0f}" x2="{ML+pw}" y2="{y25:.0f}" stroke="#4a5568" stroke-width="1" stroke-dasharray="4,3"/>')
-    out.append(f'<text x="{x25+3:.0f}" y="{MT+10}" fill="#4a5568" font-size="9">2.5</text>')
+    out.append(f'<line x1="{x25:.0f}" y1="{MT}" x2="{x25:.0f}" y2="{MT+ph}" stroke="oklch(52% 0 0)" stroke-width="1" stroke-dasharray="4,3"/>')
+    out.append(f'<line x1="{ML}" y1="{y25:.0f}" x2="{ML+pw}" y2="{y25:.0f}" stroke="oklch(52% 0 0)" stroke-width="1" stroke-dasharray="4,3"/>')
+    out.append(f'<text x="{x25+3:.0f}" y="{MT+10}" fill="oklch(52% 0 0)" font-size="9">2.5</text>')
     # Perfect calibration diagonal
-    out.append(f'<line x1="{sx(0):.0f}" y1="{sy(0):.0f}" x2="{sx(MX):.0f}" y2="{sy(MX):.0f}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>')
+    out.append(f'<line x1="{sx(0):.0f}" y1="{sy(0):.0f}" x2="{sx(MX):.0f}" y2="{sy(MX):.0f}" stroke="oklch(58% 0.15 35)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>')
     # Points
     for d in scatter:
         xg, g = d["xg"], d["goals"]
         diff = g - xg
-        col = "#4ade80" if diff > 0.3 else ("#f87171" if diff < -0.3 else "#60a5fa")
+        col = "oklch(70% 0.12 188)" if diff > 0.3 else ("oklch(58% 0.15 35)" if diff < -0.3 else "oklch(84% 0.19 80.46)")
         lg  = d["league"].replace('"', "'").replace('<', '')
-        out.append(f'<circle cx="{sx(xg):.1f}" cy="{sy(g):.1f}" r="4.5" fill="{col}" opacity="0.75" stroke="#0d1117" stroke-width="1"><title>{lg}\nxG={xg:.1f}  Golos={g}</title></circle>')
+        out.append(f'<circle cx="{sx(xg):.1f}" cy="{sy(g):.1f}" r="4.5" fill="{col}" opacity="0.75" stroke="oklch(7% 0.006 95)" stroke-width="1"><title>{lg}\nxG={xg:.1f}  Golos={g}</title></circle>')
     # Axis labels
-    out.append(f'<text x="{ML+pw/2:.0f}" y="{H-2}" fill="#94a3b8" font-size="11" text-anchor="middle">xG Previsto</text>')
-    out.append(f'<text x="11" y="{MT+ph/2:.0f}" fill="#94a3b8" font-size="11" text-anchor="middle" transform="rotate(-90,11,{MT+ph/2:.0f})">Golos Reais</text>')
+    out.append(f'<text x="{ML+pw/2:.0f}" y="{H-2}" fill="oklch(62% 0 0)" font-size="11" text-anchor="middle">xG Previsto</text>')
+    out.append(f'<text x="11" y="{MT+ph/2:.0f}" fill="oklch(62% 0 0)" font-size="11" text-anchor="middle" transform="rotate(-90,11,{MT+ph/2:.0f})">Golos Reais</text>')
     # Legend
-    out.append(f'<circle cx="{ML+4}" cy="{MT+6}" r="4" fill="#4ade80" opacity="0.8"/><text x="{ML+12}" y="{MT+10}" fill="#4ade80" font-size="9">Subestimado</text>')
-    out.append(f'<circle cx="{ML+80}" cy="{MT+6}" r="4" fill="#f87171" opacity="0.8"/><text x="{ML+88}" y="{MT+10}" fill="#f87171" font-size="9">Sobreavaliado</text>')
-    out.append(f'<circle cx="{ML+168}" cy="{MT+6}" r="4" fill="#60a5fa" opacity="0.8"/><text x="{ML+176}" y="{MT+10}" fill="#60a5fa" font-size="9">Calibrado</text>')
+    out.append(f'<circle cx="{ML+4}" cy="{MT+6}" r="4" fill="oklch(70% 0.12 188)" opacity="0.8"/><text x="{ML+12}" y="{MT+10}" fill="oklch(70% 0.12 188)" font-size="9">Subestimado</text>')
+    out.append(f'<circle cx="{ML+80}" cy="{MT+6}" r="4" fill="oklch(58% 0.15 35)" opacity="0.8"/><text x="{ML+88}" y="{MT+10}" fill="oklch(58% 0.15 35)" font-size="9">Sobreavaliado</text>')
+    out.append(f'<circle cx="{ML+168}" cy="{MT+6}" r="4" fill="oklch(84% 0.19 80.46)" opacity="0.8"/><text x="{ML+176}" y="{MT+10}" fill="oklch(84% 0.19 80.46)" font-size="9">Calibrado</text>')
     out.append('</svg>')
     return "".join(out)
 
@@ -755,22 +755,22 @@ def _trend_svg(date_trend):
     for v in [1, 2, 3, 4]:
         if v <= MX:
             y = sy(v)
-            out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="#1e2a3a" stroke-width="1"/>')
-            out.append(f'<text x="{ML-6}" y="{y+3:.0f}" fill="#4a5568" font-size="10" text-anchor="end">{v}</text>')
+            out.append(f'<line x1="{ML}" y1="{y:.0f}" x2="{ML+pw}" y2="{y:.0f}" stroke="oklch(78% 0 0 / 0.12)" stroke-width="1"/>')
+            out.append(f'<text x="{ML-6}" y="{y+3:.0f}" fill="oklch(52% 0 0)" font-size="10" text-anchor="end">{v}</text>')
     # xG line
     xg_pts = " ".join(f"{sx(i):.1f},{sy(d['avg_xg']):.1f}" for i, d in enumerate(date_trend))
     g_pts  = " ".join(f"{sx(i):.1f},{sy(d['avg_goals']):.1f}" for i, d in enumerate(date_trend))
-    out.append(f'<polyline points="{xg_pts}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round"/>')
-    out.append(f'<polyline points="{g_pts}" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linejoin="round"/>')
+    out.append(f'<polyline points="{xg_pts}" fill="none" stroke="oklch(84% 0.19 80.46)" stroke-width="2.5" stroke-linejoin="round"/>')
+    out.append(f'<polyline points="{g_pts}" fill="none" stroke="oklch(70% 0.12 188)" stroke-width="2.5" stroke-linejoin="round"/>')
     for i, d in enumerate(date_trend):
-        out.append(f'<circle cx="{sx(i):.1f}" cy="{sy(d["avg_xg"]):.1f}" r="4" fill="#60a5fa"><title>{d["date"]}: xG médio={d["avg_xg"]}</title></circle>')
-        out.append(f'<circle cx="{sx(i):.1f}" cy="{sy(d["avg_goals"]):.1f}" r="4" fill="#4ade80"><title>{d["date"]}: Golos médios={d["avg_goals"]}</title></circle>')
-        out.append(f'<text x="{sx(i):.1f}" y="{MT+ph+14}" fill="#4a5568" font-size="9" text-anchor="middle">{d["date"]}</text>')
+        out.append(f'<circle cx="{sx(i):.1f}" cy="{sy(d["avg_xg"]):.1f}" r="4" fill="oklch(84% 0.19 80.46)"><title>{d["date"]}: xG médio={d["avg_xg"]}</title></circle>')
+        out.append(f'<circle cx="{sx(i):.1f}" cy="{sy(d["avg_goals"]):.1f}" r="4" fill="oklch(70% 0.12 188)"><title>{d["date"]}: Golos médios={d["avg_goals"]}</title></circle>')
+        out.append(f'<text x="{sx(i):.1f}" y="{MT+ph+14}" fill="oklch(52% 0 0)" font-size="9" text-anchor="middle">{d["date"]}</text>')
     # legend
-    out.append(f'<line x1="{ML}" y1="{MT-8}" x2="{ML+16}" y2="{MT-8}" stroke="#60a5fa" stroke-width="2.5"/>')
-    out.append(f'<text x="{ML+20}" y="{MT-4}" fill="#60a5fa" font-size="10">xG Previsto</text>')
-    out.append(f'<line x1="{ML+90}" y1="{MT-8}" x2="{ML+106}" y2="{MT-8}" stroke="#4ade80" stroke-width="2.5"/>')
-    out.append(f'<text x="{ML+110}" y="{MT-4}" fill="#4ade80" font-size="10">Golos Reais</text>')
+    out.append(f'<line x1="{ML}" y1="{MT-8}" x2="{ML+16}" y2="{MT-8}" stroke="oklch(84% 0.19 80.46)" stroke-width="2.5"/>')
+    out.append(f'<text x="{ML+20}" y="{MT-4}" fill="oklch(84% 0.19 80.46)" font-size="10">xG Previsto</text>')
+    out.append(f'<line x1="{ML+90}" y1="{MT-8}" x2="{ML+106}" y2="{MT-8}" stroke="oklch(70% 0.12 188)" stroke-width="2.5"/>')
+    out.append(f'<text x="{ML+110}" y="{MT-4}" fill="oklch(70% 0.12 188)" font-size="10">Golos Reais</text>')
     out.append('</svg>')
     return "".join(out)
 
@@ -780,17 +780,17 @@ def xg_analysis_html(records):
         return "", ""
 
     s   = data["summary"]
-    err_col = "#4ade80" if s["avg_err"] >= -0.1 else "#f87171"
+    err_col = "oklch(70% 0.12 188)" if s["avg_err"] >= -0.1 else "oklch(58% 0.15 35)"
 
     # Cartões de sumário
     summary_html = (
         f'<div class="xga-summary">'
         f'<div class="xga-card"><div class="xga-n">{s["n"]}</div><div class="xga-l">Jogos</div></div>'
-        f'<div class="xga-card"><div class="xga-n" style="color:#60a5fa">{s["avg_xg"]}</div><div class="xga-l">xG Médio Previsto</div></div>'
-        f'<div class="xga-card"><div class="xga-n" style="color:#4ade80">{s["avg_goals"]}</div><div class="xga-l">Golos Médios Reais</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:oklch(84% 0.19 80.46)">{s["avg_xg"]}</div><div class="xga-l">xG Médio Previsto</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:oklch(70% 0.12 188)">{s["avg_goals"]}</div><div class="xga-l">Golos Médios Reais</div></div>'
         f'<div class="xga-card"><div class="xga-n" style="color:{err_col}">{"+" if s["avg_err"]>=0 else ""}{s["avg_err"]}</div><div class="xga-l">Erro Médio (g−xG)</div></div>'
-        f'<div class="xga-card"><div class="xga-n" style="color:#f87171">{s["under_pct"]}%</div><div class="xga-l">Modelo Sobreavalia</div></div>'
-        f'<div class="xga-card"><div class="xga-n" style="color:#4ade80">{s["over_pct"]}%</div><div class="xga-l">Modelo Subestima</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:oklch(58% 0.15 35)">{s["under_pct"]}%</div><div class="xga-l">Modelo Sobreavalia</div></div>'
+        f'<div class="xga-card"><div class="xga-n" style="color:oklch(70% 0.12 188)">{s["over_pct"]}%</div><div class="xga-l">Modelo Subestima</div></div>'
         f'</div>'
     )
 
@@ -809,9 +809,9 @@ def xg_analysis_html(records):
     for label, cnt in data["buckets"]:
         pct = cnt / max_bucket * 100
         # negativo = modelo sobravalia (vermelho), positivo = subestima (verde)
-        col = "#f87171" if label.startswith(("< −", "−")) else ("#4ade80" if label.startswith((">", "1", "0")) else "#60a5fa")
+        col = "oklch(58% 0.15 35)" if label.startswith(("< −", "−")) else ("oklch(70% 0.12 188)" if label.startswith((">", "1", "0")) else "oklch(84% 0.19 80.46)")
         if label in ("−1 a 0", "0 a 1"):
-            col = "#fbbf24"
+            col = "oklch(84% 0.19 80.46)"
         bucket_bars += (
             f'<div class="xga-bucket">'
             f'<div class="xga-bucket-lbl">{label}</div>'
@@ -840,7 +840,7 @@ def xg_analysis_html(records):
     league_rows = ""
     for lg in data["league_stats"]:
         diff = lg["diff"]
-        diff_col = "#4ade80" if diff > 0.3 else ("#f87171" if diff < -0.3 else "#fbbf24")
+        diff_col = "oklch(70% 0.12 188)" if diff > 0.3 else ("oklch(58% 0.15 35)" if diff < -0.3 else "oklch(84% 0.19 80.46)")
         diff_str = f'{"+" if diff>=0 else ""}{diff:.2f}'
         max_v    = max(lg["avg_xg"], lg["avg_goals"]) or 1
         xg_w     = int(lg["avg_xg"] / 5 * 100)
@@ -850,12 +850,12 @@ def xg_analysis_html(records):
             f'<td class="tdl" style="white-space:nowrap">{lg["league"]}</td>'
             f'<td class="tdn" style="color:var(--muted)">{lg["n"]}</td>'
             f'<td style="min-width:120px;padding:6px">'
-            f'  <div style="font-size:.65rem;color:#60a5fa;margin-bottom:2px">{lg["avg_xg"]:.2f}</div>'
-            f'  <div style="height:4px;background:#1e2a3a;border-radius:2px"><div style="width:{xg_w}%;height:100%;background:#60a5fa;border-radius:2px"></div></div>'
+            f'  <div style="font-size:.65rem;color:oklch(84% 0.19 80.46);margin-bottom:2px">{lg["avg_xg"]:.2f}</div>'
+            f'  <div style="height:4px;background:oklch(11% 0.006 95);border-radius:2px"><div style="width:{xg_w}%;height:100%;background:oklch(84% 0.19 80.46);border-radius:2px"></div></div>'
             f'</td>'
             f'<td style="min-width:120px;padding:6px">'
-            f'  <div style="font-size:.65rem;color:#4ade80;margin-bottom:2px">{lg["avg_goals"]:.2f}</div>'
-            f'  <div style="height:4px;background:#1e2a3a;border-radius:2px"><div style="width:{g_w}%;height:100%;background:#4ade80;border-radius:2px"></div></div>'
+            f'  <div style="font-size:.65rem;color:oklch(70% 0.12 188);margin-bottom:2px">{lg["avg_goals"]:.2f}</div>'
+            f'  <div style="height:4px;background:oklch(11% 0.006 95);border-radius:2px"><div style="width:{g_w}%;height:100%;background:oklch(70% 0.12 188);border-radius:2px"></div></div>'
             f'</td>'
             f'<td class="tdn" style="color:{diff_col};font-weight:700;font-size:.9rem">{diff_str}</td>'
             f'</tr>'
@@ -895,7 +895,7 @@ def xg_analysis_html(records):
         '.xga-buckets{display:flex;flex-direction:column;gap:8px}'
         '.xga-bucket{display:flex;align-items:center;gap:10px}'
         '.xga-bucket-lbl{width:60px;font-size:.72rem;color:var(--sub);text-align:right;flex-shrink:0}'
-        '.xga-bucket-bar-bg{flex:1;height:16px;background:#0f1420;border-radius:4px;overflow:hidden}'
+        '.xga-bucket-bar-bg{flex:1;height:16px;background:oklch(7% 0.006 95);border-radius:4px;overflow:hidden}'
         '.xga-bucket-bar-fill{height:100%;border-radius:4px;transition:width .4s}'
         '.xga-bucket-n{width:28px;font-size:.75rem;font-weight:700;color:var(--text);text-align:right;flex-shrink:0}'
     )
@@ -946,16 +946,16 @@ def btts_monitor_html(records):
         return "", ""
 
     def risk(rate):
-        if rate < 50:  return ("ALTO",  "#f87171", "#3b0a0a")
-        if rate < 65:  return ("MÉDIO", "#fbbf24", "#2a1f00")
-        return              ("BAIXO", "#4ade80", "#0d2818")
+        if rate < 50:  return ("ALTO",  "oklch(58% 0.15 35)",   "oklch(7% 0.01 35)")
+        if rate < 65:  return ("MÉDIO", "oklch(84% 0.19 80.46)","oklch(8% 0.014 80)")
+        return              ("BAIXO", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
 
     table_rows = ""
     for r in rows:
         lbl, col, bg = risk(r["raw_rate"])
         bar_w = int(r["raw_rate"])
         pick_str = f'{r["pick_rate"]:.0f}%' if r["pick_rate"] is not None else "–"
-        pick_col = rc(r["pick_rate"]) if r["pick_rate"] is not None else "#4a5568"
+        pick_col = rc(r["pick_rate"]) if r["pick_rate"] is not None else "oklch(52% 0 0)"
         excl = " 🚫" if r["league"] in EXCLUDED_LEAGUES else ""
         table_rows += (
             f'<tr>'
@@ -963,7 +963,7 @@ def btts_monitor_html(records):
             f'<td class="tdn" style="color:var(--muted)">{r["n"]}</td>'
             f'<td style="min-width:130px;padding:6px 8px">'
             f'  <div style="font-size:.68rem;color:{col};margin-bottom:2px">{r["raw_rate"]:.0f}%</div>'
-            f'  <div style="height:4px;background:#0f1420;border-radius:2px">'
+            f'  <div style="height:4px;background:oklch(7% 0.006 95);border-radius:2px">'
             f'    <div style="width:{bar_w}%;height:100%;background:{col};border-radius:2px"></div></div>'
             f'</td>'
             f'<td class="tdn" style="color:{pick_col};font-weight:700">{pick_str}</td>'
@@ -991,9 +991,9 @@ def btts_monitor_html(records):
     return "", body
 
 def rc(rate):
-    if rate>=65: return "#4ade80"
-    if rate>=55: return "#fbbf24"
-    return "#f87171"
+    if rate>=65: return "oklch(70% 0.12 188)"
+    if rate>=55: return "oklch(84% 0.19 80.46)"
+    return "oklch(58% 0.15 35)"
 
 def treble_roi(trebles_history):
     hist = [t for t in trebles_history if t.get("status") == "scored"]
@@ -1037,13 +1037,13 @@ def treble_section_html(trebles_data):
         "1X2-D": "🤝 Empate",
         "1X2-A": "✈️ Fora",
     }
-    conf_color = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24", "BAIXA": "#f87171"}
+    conf_color = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(58% 0.15 35)"}
 
     # Tripla de hoje
     if today_treble:
         picks_html = ""
         for i, pk in enumerate(today_treble["picks"], 1):
-            col   = conf_color.get(pk.get("conf",""), "#94a3b8")
+            col   = conf_color.get(pk.get("conf",""), "oklch(62% 0 0)")
             mkt   = mkt_label.get(pk["market"], pk["market"])
             odds  = f"{pk['odds']:.2f}" if pk.get("odds") else "–"
             picks_html += (
@@ -1076,14 +1076,14 @@ def treble_section_html(trebles_data):
         xc   = today_diag.get("x12_count", 0)
         miss = 3 - uc
         mkt_lbl  = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
-        conf_col = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24"}
+        conf_col = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)"}
         found_html = ""
         for pk in today_diag.get("found_picks", []):
-            col = conf_col.get(pk.get("conf", ""), "#94a3b8")
+            col = conf_col.get(pk.get("conf", ""), "oklch(62% 0 0)")
             mkt = mkt_lbl.get(pk["market"], pk["market"])
             found_html += (
                 f'<div class="tp" style="opacity:0.65">'
-                f'<span class="tpn" style="background:#1e2a3a;color:#4a5568">✓</span>'
+                f'<span class="tpn" style="background:oklch(11% 0.006 95);color:oklch(52% 0 0)">✓</span>'
                 f'<div class="tpi">'
                 f'<div class="tpl">{pk["league"]}</div>'
                 f'<div class="tpm">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</div>'
@@ -1095,15 +1095,15 @@ def treble_section_html(trebles_data):
         for _ in range(miss):
             found_html += (
                 f'<div class="tp" style="opacity:0.35;border-style:dashed">'
-                f'<span class="tpn" style="background:#1a1a2e;color:#2d3748">?</span>'
+                f'<span class="tpn" style="background:oklch(8% 0.006 95);color:oklch(52% 0 0 / 0.4)">?</span>'
                 f'<div class="tpi"><div class="tpm" style="color:var(--muted)">pick em falta</div></div>'
                 f'</div>'
             )
         today_html = (
-            f'<div class="tb-today" style="border-color:#2d3748;background:#0f1420">'
+            f'<div class="tb-today" style="border-color:oklch(78% 0 0 / 0.16);background:oklch(7% 0.006 95)">'
             f'<div class="tb-today-hdr" style="color:var(--muted)">'
             f'<span>⚠️ Sem tripla hoje — {uc}/3 picks únicos por liga</span>'
-            f'<span style="font-size:.72rem;font-weight:400;color:#4a5568">'
+            f'<span style="font-size:.72rem;font-weight:400;color:oklch(52% 0 0)">'
             f'BTTS: {bc} · 1X2-MÉDIA: {xc}</span>'
             f'</div>'
             f'{found_html}'
@@ -1115,16 +1115,16 @@ def treble_section_html(trebles_data):
 
     # ROI summary
     if roi["roi_pct"] is not None:
-        roi_col   = "#4ade80" if roi["roi_pct"] >= 0 else "#f87171"
+        roi_col   = "oklch(70% 0.12 188)" if roi["roi_pct"] >= 0 else "oklch(58% 0.15 35)"
         sign      = "+" if roi["profit_u"] >= 0 else ""
         roi_str   = f'{sign}{roi["profit_u"]:.2f}u'
         roi_sub   = f'({sign}{roi["roi_pct"]}%)'
     else:
-        roi_col  = "#94a3b8"
+        roi_col  = "oklch(62% 0 0)"
         roi_str  = "N/D"
         roi_sub  = "(sem odds)"
     avg_odds_str = f'{roi["avg_odds"]:.2f}x' if roi["avg_odds"] else "N/D"
-    avg_col      = "#60a5fa" if roi["avg_odds"] else "#4a5568"
+    avg_col      = "oklch(84% 0.19 80.46)" if roi["avg_odds"] else "oklch(52% 0 0)"
     roi_html = (
         f'<div class="tb-roi">'
         f'<div class="tb-roi-item"><div class="tb-roi-n">{roi["total"]}</div><div class="tb-roi-l">Triplas</div></div>'
@@ -1147,13 +1147,13 @@ def treble_section_html(trebles_data):
         for t in scored[:10]:
             won_t   = t.get("hit", False)
             icon    = "✓" if won_t else "✗"
-            icon_c  = "#4ade80" if won_t else "#f87171"
+            icon_c  = "oklch(70% 0.12 188)" if won_t else "oklch(58% 0.15 35)"
             profit  = t.get("profit_1u")
             if won_t:
                 p_str = f'+{profit:.2f}u' if profit is not None else 'odds N/D'
             else:
                 p_str = '-1.00u'
-            p_col   = "#4ade80" if won_t else "#f87171"
+            p_col   = "oklch(70% 0.12 188)" if won_t else "oklch(58% 0.15 35)"
             odds_d  = f"{t['combined_odds']:.2f}" if t.get("combined_odds") else "–"
             mkt_str = " · ".join(
                 f'{mkt_label.get(pk["market"], pk["market"])} {pk["home"][:12]}'
@@ -1181,14 +1181,14 @@ def treble_section_html(trebles_data):
         hist_html = '<p class="nd" style="margin-top:12px">Sem triplas pontuadas ainda.</p>'
 
     css_extra = (
-        '.tb-today{background:#0d1e35;border:1px solid #1e4d8c;border-radius:12px;padding:16px;margin-bottom:16px}'
+        '.tb-today{background:oklch(8% 0.014 80);border:1px solid oklch(61% 0.085 78 / 0.4);border-radius:8px;padding:16px;margin-bottom:16px}'
         '.tb-today-hdr{display:flex;justify-content:space-between;align-items:center;'
-        'font-size:.82rem;font-weight:700;color:#60a5fa;margin-bottom:12px}'
+        'font-size:.82rem;font-weight:700;color:var(--gold);margin-bottom:12px}'
         '.tb-odds{font-size:.78rem;color:var(--sub)}.tb-odds b{color:var(--text)}'
         '.tp{display:flex;align-items:center;gap:10px;padding:8px 0;'
-        'border-bottom:1px solid #1a2540}'
+        'border-bottom:1px solid oklch(78% 0 0 / 0.12)}'
         '.tp:last-of-type{border-bottom:none}'
-        '.tpn{width:20px;height:20px;border-radius:50%;background:#1e3a5f;color:#60a5fa;'
+        '.tpn{width:20px;height:20px;border-radius:50%;background:oklch(11% 0.02 80);color:var(--gold);'
         'font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}'
         '.tpi{flex:1;min-width:0}'
         '.tpl{font-size:.65rem;color:var(--muted);margin-bottom:2px}'
@@ -1198,7 +1198,7 @@ def treble_section_html(trebles_data):
         '.tpo{font-size:.72rem;color:var(--muted)}'
         '.tb-note{font-size:.68rem;color:var(--muted);margin-top:10px;font-style:italic}'
         '.tb-empty{color:var(--muted);font-style:italic;font-size:.82rem;padding:10px 0}'
-        '.tb-roi{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}'
+        '.tb-roi{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px}'
         '.tb-roi-item{flex:1;padding:12px 8px;text-align:center;border-right:1px solid var(--border)}'
         '.tb-roi-item:last-child{border-right:none}'
         '.tb-roi-n{font-size:1.3rem;font-weight:800;line-height:1}'
@@ -1264,7 +1264,7 @@ def build_html(history, trebles_data=None):
         r30_html = ""
         if r30 is not None:
             r30c     = rc(r30)
-            r30_html = f'<div class="sc-r30" style="color:{r30c}">⟳ 30d: <b>{r30}%</b> <span style="color:#4a5568">({r30_n}p)</span></div>'
+            r30_html = f'<div class="sc-r30" style="color:{r30c}">⟳ 30d: <b>{r30}%</b> <span style="color:oklch(52% 0 0)">({r30_n}p)</span></div>'
         conf_rows = "".join(
             f'<tr><td class="tdc">{c}</td><td>{cv["picks"]}</td>'
             f'<td>{cv["hits"]}</td><td style="color:{rc(cv["rate"])};font-weight:700">{cv["rate"]}%</td></tr>'
@@ -1289,7 +1289,7 @@ def build_html(history, trebles_data=None):
             f'<div class="rbg"><div class="rf" style="width:{bw}%;background:{col}"></div></div>'
             f'{thtml}'
             f'<table class="ct"><thead><tr><th>Confiança</th><th>Picks</th><th>Acertos</th><th>Taxa</th></tr></thead>'
-            f'<tbody>{conf_rows or "<tr><td colspan=4 style=color:#4a5568>Ainda sem dados</td></tr>"}</tbody></table>'
+            f'<tbody>{conf_rows or "<tr><td colspan=4 style=color:oklch(52% 0 0)>Ainda sem dados</td></tr>"}</tbody></table>'
             f'</div>'
         )
 
@@ -1299,8 +1299,8 @@ def build_html(history, trebles_data=None):
         f'<div class="sc-sub">{sxg["picks"]} jogos</div></div></div>'
         f'<div class="xgg">'
         f'<div class="xgi"><div class="xgv">{sxg["avg_xg"]}</div><div class="xgl">xG médio previsto</div></div>'
-        f'<div class="xgi"><div class="xgv" style="color:#60a5fa">{sxg["avg_goals"]}</div><div class="xgl">Golos médios reais</div></div>'
-        f'<div class="xgi"><div class="xgv" style="color:#fbbf24">{sxg["over_rate"]}%</div><div class="xgl">Golos &gt; xG</div></div>'
+        f'<div class="xgi"><div class="xgv" style="color:oklch(84% 0.19 80.46)">{sxg["avg_goals"]}</div><div class="xgl">Golos médios reais</div></div>'
+        f'<div class="xgi"><div class="xgv" style="color:oklch(84% 0.19 80.46)">{sxg["over_rate"]}%</div><div class="xgl">Golos &gt; xG</div></div>'
         f'</div></div>'
     )
 
@@ -1338,8 +1338,8 @@ def build_html(history, trebles_data=None):
             f'<div class="stitle">Taxa de Acerto por Mercado</div>'
             f'<div class="grid">{stat_card(s1)}{stat_card(s2)}{stat_card(s3)}{stat_card(s4)}{xg_card}</div>'
             f'{calib_html}'
-            f'<div style="background:#1c1a10;border:1px solid #78350f;border-radius:8px;'
-            f'padding:10px 14px;margin-bottom:24px;font-size:.72rem;color:#fbbf24;line-height:1.5">'
+            f'<div style="background:oklch(8% 0.014 80);border:1px solid oklch(61% 0.085 78 / 0.5);border-radius:8px;'
+            f'padding:10px 14px;margin-bottom:24px;font-size:.72rem;color:oklch(84% 0.19 80.46);line-height:1.5">'
             f'<b>⚠ Risco in-sample:</b> os thresholds de selecção (BTTS ≥ 61%, 1X2-MÉDIA ≥ 61%) '
             f'foram optimizados nos mesmos {total} registos que avaliam o desempenho — as métricas '
             f'podem sobrestimar a performance real. Validação out-of-sample recomendada quando N ≥ 400 por mercado.</div>'
@@ -1350,27 +1350,33 @@ def build_html(history, trebles_data=None):
         )
 
     css = (
-        ':root{--bg:#0d1117;--card:#1c2333;--border:#2d3748;--blue:#60a5fa;--green:#4ade80;'
-        '--yellow:#fbbf24;--red:#f87171;--text:#f1f5f9;--sub:#94a3b8;--muted:#4a5568}'
+        '@import url(\'https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Alumni+Sans+Pinstripe:wght@400;600&display=swap\');'
+        ':root{--bg:oklch(7% 0.006 95);--surface:oklch(4% 0.004 95);--card:oklch(11% 0.006 95);'
+        '--graphite:oklch(15% 0.008 95);--gold:oklch(84% 0.19 80.46);--gold-rich:oklch(77% 0.13 82);'
+        '--gold-deep:oklch(61% 0.085 78);--border:oklch(78% 0 0 / 0.16);'
+        '--text:oklch(91% 0 0);--sub:oklch(72% 0 0);--muted:oklch(62% 0 0);--faint:oklch(52% 0 0);'
+        '--teal:oklch(70% 0.12 188);--teal-deep:oklch(49% 0.08 188);'
+        '--warn:oklch(58% 0.15 35);'
+        '--blue:var(--gold);--green:var(--teal);--green-dim:var(--teal-deep);--yellow:oklch(86% 0.07 84);--red:var(--warn)}'
         '*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);'
-        'font-family:"Inter","Segoe UI",system-ui,sans-serif}'
-        '.hdr{background:linear-gradient(180deg,#0a0f1e,#0d1117);border-bottom:1px solid var(--border);padding:20px 28px}'
-        '.hdr h1{font-size:1.5rem;font-weight:800;background:linear-gradient(90deg,#60a5fa,#a78bfa);'
-        '-webkit-background-clip:text;-webkit-text-fill-color:transparent}'
+        'font-family:"Albert Sans","Segoe UI",system-ui,sans-serif}'
+        '.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:20px 28px}'
+        '.hdr h1{font-family:"Alumni Sans Pinstripe","Albert Sans",system-ui,sans-serif;'
+        'font-size:1.5rem;font-weight:600;letter-spacing:.02em;color:var(--gold)}'
         '.hdr .meta{font-size:.72rem;color:var(--muted);margin-top:4px}'
-        '.tabs{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}'
+        '.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px}'
         '.tab{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);'
         'border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}'
-        '.tab:hover{color:var(--sub)}.tab.active{color:var(--blue);border-bottom-color:var(--blue)}'
+        '.tab:hover{color:var(--sub)}.tab.active{color:var(--gold);border-bottom-color:var(--gold)}'
         '.wrap{max-width:960px;margin:0 auto;padding:24px 28px}'
-        '.info{background:#161b27;border:1px solid var(--border);border-radius:10px;padding:14px 20px;'
+        '.info{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 20px;'
         'margin-bottom:24px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:.8rem;color:var(--sub)}'
         '.info b{color:var(--text)}.grow{margin-left:auto;font-size:.72rem;color:var(--muted)}'
         '.stitle{font-size:.85rem;font-weight:700;color:var(--sub);margin:0 0 14px;text-transform:uppercase;'
-        'letter-spacing:.5px;padding-left:10px;border-left:3px solid var(--blue)}'
+        'letter-spacing:.5px;padding-left:10px}'
         '.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px}'
         '.lgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}'
-        '.sc,.lc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}'
+        '.sc,.lc{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px}'
         '.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}'
         '.sc-title{font-size:1rem;font-weight:700}.sc-sub{font-size:.72rem;color:var(--muted);margin-top:3px}'
         '.sc-rate{font-size:1.8rem;font-weight:800;line-height:1}'
@@ -1383,12 +1389,12 @@ def build_html(history, trebles_data=None):
         '.ct{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:10px}'
         '.ct th{text-align:left;color:var(--muted);padding:5px 6px;font-size:.65rem;text-transform:uppercase;'
         'letter-spacing:.4px;border-bottom:1px solid var(--border)}'
-        '.ct td{padding:6px 6px;border-bottom:1px solid #1a1f2e}.ct tr:last-child td{border-bottom:none}'
+        '.ct td{padding:6px 6px;border-bottom:1px solid oklch(78% 0 0 / 0.1)}.ct tr:last-child td{border-bottom:none}'
         '.tdc{color:var(--sub)}.tdl{color:var(--text);max-width:160px;overflow:hidden;'
         'text-overflow:ellipsis;white-space:nowrap}.tdn{text-align:right}'
         '.xgg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}'
-        '.xgi{background:#0f1420;border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}'
-        '.xgv{font-size:1.3rem;font-weight:800;color:var(--green)}.xgl{font-size:.65rem;color:var(--muted);margin-top:4px}'
+        '.xgi{background:var(--graphite);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}'
+        '.xgv{font-size:1.3rem;font-weight:800;color:var(--teal)}.xgl{font-size:.65rem;color:var(--muted);margin-top:4px}'
         '.lct{font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:12px;text-transform:uppercase;letter-spacing:.4px}'
         '.nd{font-size:.78rem;color:var(--muted);font-style:italic;padding:8px 0}'
         '.empty{text-align:center;padding:60px 20px;color:var(--muted)}.ebig{font-size:3rem;margin-bottom:12px}'
@@ -1396,7 +1402,7 @@ def build_html(history, trebles_data=None):
         '.footer{text-align:center;padding:28px;font-size:.68rem;color:var(--muted);border-top:1px solid var(--border)}'
         '@media(max-width:580px){.wrap,.hdr{padding-left:14px;padding-right:14px}'
         '.xga-grid2{grid-template-columns:1fr}}'
-        '.sc-ci{font-size:.65rem;color:#4a5568;margin-top:2px;line-height:1.3}'
+        '.sc-ci{font-size:.65rem;color:var(--faint);margin-top:2px;line-height:1.3}'
         '.sc-r30{font-size:.72rem;margin-bottom:6px}'
         + treble_css + xga_css
     )
