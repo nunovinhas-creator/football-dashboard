@@ -45,6 +45,28 @@ _PREDS_KEEP_DAYS = 60
 _PAGE_SIZE       = 50
 _GA_ID           = "G-WE48R4KL96"
 
+# Labels de mercado para triplas
+_MKT_LABEL = {
+    "BTTS":  "🔁 BTTS",
+    "1X2-H": "🏠 Casa",
+    "1X2-D": "🤝 Empate",
+    "1X2-A": "✈️ Fora",
+}
+
+# Cores de confiança OKLCH (web — email usa hex, ver _email_html)
+_CONF_COLOR = {
+    "ALTA":  "oklch(84% 0.19 80.46)",
+    "MÉDIA": "oklch(70% 0.12 188)",
+    "BAIXA": "oklch(58% 0.15 35)",
+}
+
+def _conf_from_val(conf_val):
+    """Converte valor numérico de confiança (0-1) para label ALTA/MÉDIA/BAIXA."""
+    c = float(conf_val or 0)
+    if c >= _CONF_ALTA:    return "ALTA"
+    if c >= _CONF_MEDIA:   return "MÉDIA"
+    return "BAIXA"
+
 def _log(level, msg):
     ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
     print(f"[{ts}] {level:5s} {msg}")
@@ -266,9 +288,7 @@ def make_record(pred, result):
     elif best == pd: pred_r = "D"
     else:            pred_r = "A"
 
-    if conf_val >= _CONF_ALTA:   conf = "ALTA"
-    elif conf_val >= _CONF_MEDIA: conf = "MÉDIA"
-    else:                         conf = "BAIXA"
+    conf = _conf_from_val(conf_val)
 
     event_date = event.get("event_date", "")
     dt = parse_dt(event_date)
@@ -362,9 +382,7 @@ def build_daily_treble(preds):
         pa       = float(mr.get("prob_away") or 0)
         conf_val = float(model.get("confidence") or 0)
 
-        if conf_val >= _CONF_ALTA:   conf = "ALTA"
-        elif conf_val >= _CONF_MEDIA: conf = "MÉDIA"
-        else:                         conf = "BAIXA"
+        conf = _conf_from_val(conf_val)
 
         league = event.get("league_name", "?")
         eid    = event.get("id")
@@ -448,10 +466,7 @@ def build_daily_treble(preds):
 def score_treble(treble, records_for_date):
     """Pontua uma tripla pendente usando os registos reais do dia."""
     by_event = {r["event_id"]: r for r in records_for_date if r.get("event_id")}
-    by_match  = {}
-    for r in records_for_date:
-        key = (r.get("league", ""), r.get("home", ""), r.get("away", ""))
-        by_match[key] = r
+    by_match = {(r.get("league", ""), r.get("home", ""), r.get("away", "")): r for r in records_for_date}
 
     results = []
     for pick in treble["picks"]:
@@ -1054,20 +1069,12 @@ def treble_section_html(trebles_data):
 
     today_treble = next((t for t in pending if t.get("date") == today), None)
 
-    mkt_label = {
-        "BTTS":  "🔁 BTTS",
-        "1X2-H": "🏠 Casa",
-        "1X2-D": "🤝 Empate",
-        "1X2-A": "✈️ Fora",
-    }
-    conf_color = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(58% 0.15 35)"}
-
     # Tripla de hoje
     if today_treble:
         pick_parts = []
         for i, pk in enumerate(today_treble["picks"], 1):
-            col   = conf_color.get(pk.get("conf",""), "oklch(62% 0 0)")
-            mkt   = mkt_label.get(pk.get("market",""), pk.get("market","?"))
+            col   = _CONF_COLOR.get(pk.get("conf",""), "oklch(62% 0 0)")
+            mkt   = _MKT_LABEL.get(pk.get("market",""), pk.get("market","?"))
             odds  = f"{pk['odds']:.2f}" if pk.get("odds") else "–"
             pick_parts.append(
                 f'<div class="tp">'
@@ -1099,12 +1106,10 @@ def treble_section_html(trebles_data):
         bc   = today_diag.get("btts_count", 0)
         xc   = today_diag.get("x12_count", 0)
         miss = 3 - uc
-        mkt_lbl  = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
-        conf_col = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)"}
         found_html = ""
         for pk in today_diag.get("found_picks", []):
-            col = conf_col.get(pk.get("conf", ""), "oklch(62% 0 0)")
-            mkt = mkt_lbl.get(pk["market"], pk["market"])
+            col = _CONF_COLOR.get(pk.get("conf", ""), "oklch(62% 0 0)")
+            mkt = _MKT_LABEL.get(pk.get("market", ""), pk.get("market", "?"))
             found_html += (
                 f'<div class="tp" style="opacity:0.65">'
                 f'<span class="tpn" style="background:oklch(11% 0.006 95);color:oklch(52% 0 0)">✓</span>'
@@ -1180,7 +1185,7 @@ def treble_section_html(trebles_data):
             p_col   = "oklch(70% 0.12 188)" if won_t else "oklch(58% 0.15 35)"
             odds_d  = f"{t['combined_odds']:.2f}" if t.get("combined_odds") else "–"
             mkt_str = " · ".join(
-                f'{mkt_label.get(pk["market"], pk["market"])} {pk["home"][:12]}'
+                f'{_MKT_LABEL.get(pk.get("market", ""), pk.get("market", "?"))} {pk["home"][:12]}'
                 for pk in t.get("picks", [])
             )
             results = t.get("pick_results", [])
@@ -1540,7 +1545,6 @@ def _run_score_mode(history, today):
         _log("INFO", f"{len(preds)} predições carregadas de {date_str}")
         new_records = []
         found = 0
-        not_finished = 0
 
         for p in preds:
             eid = p.get("event", {}).get("id")
@@ -1550,10 +1554,8 @@ def _run_score_mode(history, today):
             if result:
                 found += 1
                 new_records.append(make_record(p, result))
-            else:
-                not_finished += 1
 
-        _log("INFO", f"{found}/{len(preds)} com resultado | {not_finished} sem resultado")
+        _log("INFO", f"{found}/{len(preds)} com resultado | {len(preds) - found} sem resultado")
 
         coverage = found / len(preds) if preds else 0
         if coverage >= _COVERAGE_MIN:
@@ -1635,7 +1637,7 @@ def _email_html(history, trebles):  # noqa: C901
     today    = today_str()
 
     # ── helpers inline ────────────────────────────────────────────────────────
-    mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
+    # mkt_label usa _MKT_LABEL (módulo); conf_col usa hex porque email não suporta oklch
     conf_col  = {"ALTA": "#16a34a", "MÉDIA": "#ca8a04", "BAIXA": "#dc2626"}
     total_records = len(records)
     date_min = min((r["date"] for r in records), default="–")
@@ -1667,7 +1669,7 @@ def _email_html(history, trebles):  # noqa: C901
         picks_rows = ""
         for i, pk in enumerate(today_treble["picks"], 1):
             col  = conf_col.get(pk.get("conf", ""), "#64748b")
-            mkt  = mkt_label.get(pk["market"], pk["market"])
+            mkt  = _MKT_LABEL.get(pk.get("market", ""), pk.get("market", "?"))
             odds = ("@" + f"{pk['odds']:.2f}") if pk.get("odds") else "odds N/D"
             prob = int(pk["prob"] * 100)
             conf = pk.get("conf", "")
@@ -2025,7 +2027,7 @@ def _email_html(history, trebles):  # noqa: C901
             p_str, p_col = "-1.00u", "#dc2626"
         res_icons = "".join(("✓" if r else "✗") for r in t.get("pick_results", []))
         picks_str = " · ".join(
-            mkt_label.get(pk["market"], pk["market"]) + " " + pk["league"]
+            _MKT_LABEL.get(pk.get("market", ""), pk.get("market", "?")) + " " + pk["league"]
             for pk in t.get("picks", [])
         )
         odds_str = f"{t['combined_odds']:.2f}" if t.get("combined_odds") else "–"

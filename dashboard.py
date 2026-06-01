@@ -15,6 +15,29 @@ from datetime import datetime, timezone, timedelta
 _CONF_ALTA  = 0.65
 _CONF_MEDIA = 0.45
 _GA_ID      = "G-WE48R4KL96"
+_PAGE_SIZE  = 50
+
+# Labels de mercado para triplas (usados em treble_banner_html e send_telegram)
+_MKT_LABEL = {
+    "BTTS":  "🔁 BTTS",
+    "1X2-H": "🏠 Casa",
+    "1X2-D": "🤝 Empate",
+    "1X2-A": "✈️ Fora",
+}
+
+# Cores de confiança OKLCH (web)
+_CONF_COLOR = {
+    "ALTA":  "oklch(84% 0.19 80.46)",
+    "MÉDIA": "oklch(70% 0.12 188)",
+    "BAIXA": "oklch(72% 0.15 35)",
+}
+
+# Estilos CSS completos dos badges de confiança (usados em match_card_html)
+_BADGE_STYLE = {
+    "ALTA":  "background:oklch(10% 0.015 80);color:oklch(84% 0.19 80.46);border:1px solid oklch(61% 0.085 78 / 0.45)",
+    "MÉDIA": "background:oklch(7% 0.01 188);color:oklch(70% 0.12 188);border:1px solid oklch(49% 0.08 188 / 0.5)",
+    "BAIXA": "background:oklch(7% 0.01 35);color:oklch(72% 0.15 35);border:1px solid oklch(48% 0.1 35 / 0.5)",
+}
 
 BSD_KEY  = os.environ["BSD_API_KEY"]
 TG_TOKEN = os.environ["TG_TOKEN"]
@@ -81,7 +104,7 @@ def parse_dt(s, context=""):
 def fetch_all_predictions():
     all_preds = []
     offset = 0
-    limit = 50
+    limit = _PAGE_SIZE
     while True:
         try:
             data = get("/predictions/", {"limit": limit, "offset": offset})
@@ -696,12 +719,7 @@ def match_card_html(enriched):
           <div class="score-label">Previsão</div>
         </div>'''
 
-    if conf_label == "ALTA":
-        badge_style = "background:oklch(10% 0.015 80);color:oklch(84% 0.19 80.46);border:1px solid oklch(61% 0.085 78 / 0.45)"
-    elif conf_label == "MÉDIA":
-        badge_style = "background:oklch(7% 0.01 188);color:oklch(70% 0.12 188);border:1px solid oklch(49% 0.08 188 / 0.5)"
-    else:
-        badge_style = "background:oklch(7% 0.01 35);color:oklch(72% 0.15 35);border:1px solid oklch(48% 0.1 35 / 0.5)"
+    badge_style = _BADGE_STYLE.get(conf_label, _BADGE_STYLE["BAIXA"])
 
     def bar(p, highlight):
         color = "oklch(84% 0.19 80.46)" if highlight else "oklch(78% 0 0 / 0.16)"
@@ -788,13 +806,11 @@ def load_todays_treble():
 def treble_banner_html(treble):
     if not treble:
         return ""
-    mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
-    conf_col  = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(72% 0.15 35)"}
     pick_parts = []
     for i, pk in enumerate(treble.get("picks", []), 1):
         mkt_key = pk.get("market", "")
-        col  = conf_col.get(pk.get("conf", ""), "oklch(62% 0 0)")
-        mkt  = mkt_label.get(mkt_key, mkt_key or "?")
+        col  = _CONF_COLOR.get(pk.get("conf", ""), "oklch(62% 0 0)")
+        mkt  = _MKT_LABEL.get(mkt_key, mkt_key or "?")
         odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
         conf_bg = {"ALTA": "oklch(10% 0.015 80)", "MÉDIA": "oklch(7% 0.01 188)", "BAIXA": "oklch(7% 0.01 35)"}.get(pk.get("conf",""), "oklch(8% 0.006 95)")
         conf_bd = {"ALTA": "oklch(61% 0.085 78 / 0.45)", "MÉDIA": "oklch(49% 0.08 188 / 0.5)", "BAIXA": "oklch(48% 0.1 35 / 0.5)"}.get(pk.get("conf",""), "oklch(52% 0 0 / 0.3)")
@@ -936,13 +952,12 @@ def send_telegram(enriched_list, todays_treble=None):
 
     # ── 1. Tripla do dia ──────────────────────────────────────────────────────
     treble  = todays_treble
-    mkt_map = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     if treble:
         picks_lines = []
         for i, pk in enumerate(treble.get("picks", []), 1):
             conf    = pk.get("conf", "")
             mkt_key = pk.get("market", "")
-            mkt     = mkt_map.get(mkt_key, mkt_key or "?")
+            mkt     = _MKT_LABEL.get(mkt_key, mkt_key or "?")
             odds    = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
             flag    = league_flag(pk.get("league", ""))
             picks_lines.append(
