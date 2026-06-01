@@ -239,15 +239,15 @@ def predict_goals(home_xg, away_xg, btts_prob, o25_prob):
     high = low + 1
 
     if o25c >= 0.60 and bp >= 0.60:
-        verdict, vcol = "Over 2.5 + BTTS",   "#4ade80"
+        verdict, vcol = "Over 2.5 + BTTS",   "oklch(70% 0.12 188)"
     elif o25c >= 0.60:
-        verdict, vcol = "Over 2.5 provável",  "#4ade80"
+        verdict, vcol = "Over 2.5 provável",  "oklch(70% 0.12 188)"
     elif bp >= 0.65:
-        verdict, vcol = "BTTS provável",       "#fbbf24"
+        verdict, vcol = "BTTS provável",       "oklch(84% 0.19 80.46)"
     elif o25c <= 0.38:
-        verdict, vcol = "Under 2.5 provável", "#f87171"
+        verdict, vcol = "Under 2.5 provável", "oklch(58% 0.15 35)"
     else:
-        verdict, vcol = "Inconclusivo",        "#4a5568"
+        verdict, vcol = "Inconclusivo",        "oklch(52% 0 0)"
 
     return {
         "xgt":     round(xgt, 2),
@@ -261,11 +261,11 @@ def predict_goals(home_xg, away_xg, btts_prob, o25_prob):
 
 def confidence_badge(conf):
     if conf is None:
-        return ("MÉDIA", "#f59e0b", "#2a1f00")
+        return ("MÉDIA", "oklch(70% 0.12 188)", "oklch(7% 0.01 188)")
     c = float(conf)
-    if c >= 0.65:   return ("ALTA",  "#22c55e", "#0a2010")
-    elif c >= 0.45: return ("MÉDIA", "#f59e0b", "#2a1f00")
-    else:           return ("BAIXA", "#ef4444", "#2a0808")
+    if c >= 0.65:   return ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)")
+    elif c >= 0.45: return ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
+    else:           return ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)")
 
 def tip_label(hw, dr, aw, o25, conf):
     best = max(hw, dr, aw)
@@ -284,52 +284,69 @@ def has_pred_data(pred):
 
 def _dashboard_css():
     return """
+@import url('https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700;800&family=Alumni+Sans+Pinstripe:wght@400;600&display=swap');
+
 :root{
-  --bg:#0d1117;
-  --surface:#161b27;
-  --card:#1c2333;
-  --card-hover:#1f2740;
-  --border:#2d3748;
-  --border-light:#3a4560;
-  --blue:#60a5fa;
-  --blue-dim:#3b82f6;
-  --green:#4ade80;
-  --green-dim:#22c55e;
-  --yellow:#fbbf24;
-  --red:#f87171;
-  --purple:#a78bfa;
-  --text:#f1f5f9;
-  --sub:#94a3b8;
-  --muted:#4a5568;
-  --win-bg:#0d2818;
-  --win-border:#166534;
+  --bg:         oklch(7% 0.006 95);
+  --surface:    oklch(4% 0.004 95);
+  --card:       oklch(11% 0.006 95);
+  --card-hover: oklch(13% 0.007 95);
+  --graphite:   oklch(15% 0.008 95);
+  --graphite2:  oklch(19% 0.008 95);
+  --gold:       oklch(84% 0.19 80.46);
+  --gold-rich:  oklch(77% 0.13 82);
+  --gold-deep:  oklch(61% 0.085 78);
+  --gold-pale:  oklch(86% 0.07 84);
+  --border:     oklch(78% 0 0 / 0.16);
+  --border-s:   oklch(74% 0.09 82 / 0.6);
+  --text:       oklch(91% 0 0);
+  --text-warm:  oklch(88% 0 0);
+  --sub:        oklch(72% 0 0);
+  --muted:      oklch(62% 0 0);
+  --faint:      oklch(52% 0 0);
+  --teal:       oklch(70% 0.12 188);
+  --teal-pale:  oklch(82% 0.07 188);
+  --teal-deep:  oklch(49% 0.08 188);
+  --warn:       oklch(58% 0.15 35);
+  --warn-pale:  oklch(72% 0.15 35);
+  /* Semantic aliases — backwards-compat */
+  --blue:       var(--gold);
+  --blue-dim:   var(--gold-rich);
+  --green:      var(--teal);
+  --green-dim:  var(--teal-deep);
+  --yellow:     var(--gold-pale);
+  --red:        var(--warn);
+  --border-light:oklch(74% 0.09 82 / 0.3);
+  --win-bg:     oklch(7% 0.01 188);
+  --win-border: var(--teal-deep);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",system-ui,sans-serif;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:"Albert Sans","Segoe UI",system-ui,sans-serif;min-height:100vh}
 
 /* HEADER */
 .header{
-  background:linear-gradient(180deg,#0a0f1e 0%,#0d1117 100%);
+  background:var(--surface);
   border-bottom:1px solid var(--border);
   padding:22px 28px 18px;
   display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px
 }
+/* h1 uses Alumni Sans Pinstripe, flat Kinpaku Gold — no gradient text */
 .header-left h1{
-  font-size:1.6rem;font-weight:800;letter-spacing:-.5px;
-  background:linear-gradient(90deg,#60a5fa 0%,#a78bfa 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent
+  font-family:"Alumni Sans Pinstripe","Albert Sans",system-ui,sans-serif;
+  font-size:1.7rem;font-weight:600;letter-spacing:.02em;
+  color:var(--gold)
 }
 .header-left .meta{font-size:.72rem;color:var(--muted);margin-top:5px}
 .live-dot{
   display:inline-block;width:7px;height:7px;border-radius:50%;
-  background:#4ade80;margin-right:5px;
+  background:var(--teal);margin-right:5px;
   animation:pulse 2s infinite
 }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* STATS STRIP */
 .stats-strip{
-  display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);
+  display:flex;background:var(--surface);border-bottom:1px solid var(--border);
 }
 .stat-item{
   flex:1;padding:16px 12px;text-align:center;
@@ -341,57 +358,57 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 
 /* FILTERS */
 .filters{
-  padding:14px 28px;background:#0f1420;
+  padding:14px 28px;background:var(--bg);
   border-bottom:1px solid var(--border);
   display:flex;gap:8px;flex-wrap:wrap;align-items:center
 }
 .f-group{display:flex;align-items:center;gap:6px}
 .f-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
 .filter-select{
-  background:#1c2333;border:1px solid var(--border);color:var(--text);
+  background:var(--card);border:1px solid var(--border);color:var(--text);
   padding:6px 10px;border-radius:8px;font-size:.78rem;cursor:pointer;outline:none;
   transition:border-color .15s
 }
-.filter-select:focus{border-color:var(--blue-dim)}
+.filter-select:focus{border-color:var(--gold-rich)}
 .f-divider{width:1px;height:24px;background:var(--border);margin:0 4px}
 .filter-btn{
-  background:#1c2333;border:1px solid var(--border);color:var(--sub);
+  background:var(--card);border:1px solid var(--border);color:var(--sub);
   padding:5px 12px;border-radius:20px;font-size:.75rem;cursor:pointer;
   transition:all .15s;white-space:nowrap;font-weight:500
 }
 .filter-btn:hover{border-color:var(--border-light);color:var(--text)}
-.filter-btn.active-blue{background:#1e3a5f;border-color:var(--blue);color:var(--blue)}
-.filter-btn.active-green{background:#0d2818;border-color:var(--green-dim);color:var(--green)}
-.filter-btn.active-yellow{background:#2a1f00;border-color:var(--yellow);color:var(--yellow)}
-.filter-btn.active-red{background:#2a0a0a;border-color:var(--red);color:var(--red)}
+.filter-btn.active-blue{background:oklch(10% 0.015 80);border-color:var(--gold);color:var(--gold)}
+.filter-btn.active-green{background:oklch(7% 0.01 188);border-color:var(--teal-deep);color:var(--teal)}
+.filter-btn.active-yellow{background:oklch(8% 0.014 80);border-color:var(--gold-pale);color:var(--gold-pale)}
+.filter-btn.active-red{background:oklch(7% 0.01 35);border-color:var(--warn);color:var(--warn)}
 .btn-reset{
   background:transparent;border:1px solid var(--muted);color:var(--muted);
   padding:5px 10px;border-radius:8px;font-size:.72rem;cursor:pointer;
   transition:all .15s;margin-left:auto
 }
-.btn-reset:hover{border-color:var(--red);color:var(--red)}
+.btn-reset:hover{border-color:var(--warn);color:var(--warn)}
 
 /* CARDS CONTAINER */
 .cards-wrap{padding:20px 28px;max-width:1000px;margin:0 auto}
 .no-results{text-align:center;padding:60px;color:var(--muted);font-size:.9rem}
 
-/* CARD */
+/* CARD — no side-stripe borders (Impeccable ban) */
 .card{
   background:var(--card);border:1px solid var(--border);
-  border-radius:14px;margin-bottom:12px;overflow:hidden;
+  border-radius:8px;margin-bottom:12px;overflow:hidden;
   transition:border-color .2s,transform .15s;
 }
 .card:hover{border-color:var(--border-light);transform:translateY(-1px)}
 .card.hidden{display:none}
-.card.finished{border-left:3px solid var(--green-dim)}
-.card.live-now{border-left:3px solid var(--yellow);animation:live-glow 3s infinite}
-@keyframes live-glow{0%,100%{box-shadow:none}50%{box-shadow:0 0 12px #fbbf2420}}
+.card.finished{border-color:oklch(49% 0.08 188 / 0.5)}
+.card.live-now{border-color:var(--gold-rich);animation:live-glow 3s infinite}
+@keyframes live-glow{0%,100%{box-shadow:none}50%{box-shadow:0 0 12px oklch(84% 0.19 80.46 / 0.12)}}
 
 /* CARD TOP */
 .card-top{
   display:flex;justify-content:space-between;align-items:center;
   padding:10px 16px 8px;
-  background:linear-gradient(90deg,#161b27 0%,#1a1f30 100%);
+  background:var(--graphite);
   border-bottom:1px solid var(--border)
 }
 .league-pill{
@@ -401,7 +418,7 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 .card-right{display:flex;gap:8px;align-items:center}
 .conf-badge{
   font-size:.65rem;font-weight:800;padding:3px 9px;
-  border-radius:20px;letter-spacing:.4px;text-transform:uppercase
+  border-radius:4px;letter-spacing:.4px;text-transform:uppercase
 }
 .ko-time{font-size:.71rem;color:var(--muted)}
 
@@ -421,39 +438,39 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
   min-width:80px;flex-shrink:0
 }
 .predicted-score{
-  background:#1a2040;border:1px solid var(--border-light);
+  background:var(--graphite);border:1px solid var(--border);
   border-radius:8px;padding:5px 14px;font-size:1rem;
-  font-weight:800;color:var(--blue);text-align:center
+  font-weight:800;color:var(--gold);text-align:center
 }
 .score-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .final-score{
   background:var(--win-bg);border:1px solid var(--win-border);
   border-radius:8px;padding:5px 14px;font-size:1.1rem;
-  font-weight:800;color:var(--green);text-align:center
+  font-weight:800;color:var(--teal);text-align:center
 }
 
 /* TIP */
 .tip-row{margin-bottom:12px}
 .tip-badge{
   display:inline-flex;align-items:center;gap:5px;
-  font-size:.75rem;font-weight:600;color:var(--yellow);
-  background:#1f1a00;border:1px solid #3a3000;
+  font-size:.75rem;font-weight:600;color:var(--gold);
+  background:oklch(8% 0.014 80);border:1px solid oklch(61% 0.085 78 / 0.4);
   padding:4px 12px;border-radius:6px
 }
 
 /* PROBS */
 .probs-row{display:flex;gap:6px;margin-bottom:10px}
 .prob-col{
-  flex:1;background:#0f1420;border:1px solid var(--border);
-  border-radius:10px;padding:10px 8px;text-align:center;
+  flex:1;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:10px 8px;text-align:center;
   transition:all .2s
 }
 .prob-col.winner{
-  border-color:var(--blue-dim);background:#0d1d3a;
+  border-color:var(--gold-rich);background:oklch(10% 0.015 80);
 }
 .prob-name{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
 .prob-val{font-size:1.15rem;font-weight:800;color:var(--text)}
-.prob-col.winner .prob-val{color:var(--blue)}
+.prob-col.winner .prob-val{color:var(--gold)}
 .prob-bar{height:4px;border-radius:2px;background:var(--border);margin-top:6px}
 .prob-bar-fill{height:100%;border-radius:2px;transition:width .4s}
 
@@ -461,36 +478,35 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 .extra-row{display:flex;gap:6px;flex-wrap:wrap}
 .extra-pill{
   display:flex;align-items:center;gap:5px;
-  background:#0f1420;border:1px solid var(--border);
+  background:var(--bg);border:1px solid var(--border);
   border-radius:8px;padding:5px 11px;font-size:.73rem;color:var(--sub)
 }
 .extra-pill span{font-weight:700;color:var(--text)}
-.extra-pill.hot-green{border-color:#166534;background:#0d2818;color:var(--green)}
-.extra-pill.hot-green span{color:var(--green)}
-.extra-pill.hot-blue{border-color:var(--blue-dim);background:#0d1d3a;color:var(--blue)}
-.extra-pill.hot-blue span{color:var(--blue)}
+.extra-pill.hot-green{border-color:var(--teal-deep);background:var(--win-bg);color:var(--teal)}
+.extra-pill.hot-green span{color:var(--teal)}
+.extra-pill.hot-blue{border-color:var(--gold-rich);background:oklch(10% 0.015 80);color:var(--gold)}
+.extra-pill.hot-blue span{color:var(--gold)}
 
 /* TREBLE BANNER */
 .treble-banner{
-  background:linear-gradient(135deg,#0b1f3a 0%,#0d1e35 100%);
-  border:1px solid #1e4d8c;border-radius:12px;
-  padding:14px 20px;margin:14px 28px 0;max-width:1000px;margin-left:auto;margin-right:auto;
-  box-shadow:0 0 20px #1e4d8c22
+  background:oklch(8% 0.014 80);
+  border:1px solid oklch(61% 0.085 78 / 0.4);border-radius:8px;
+  padding:14px 20px;margin:14px 28px 0;max-width:1000px;margin-left:auto;margin-right:auto
 }
 .treble-banner-hdr{
   display:flex;justify-content:space-between;align-items:center;
-  font-size:.82rem;font-weight:700;color:#60a5fa;margin-bottom:10px
+  font-size:.82rem;font-weight:700;color:var(--gold);margin-bottom:10px
 }
 .treble-banner-odds{font-size:.75rem;color:var(--sub);font-weight:400}
 .treble-banner-odds b{color:var(--text)}
-.treble-link{color:#60a5fa;text-decoration:none;font-weight:600}
+.treble-link{color:var(--gold);text-decoration:none;font-weight:600}
 .treble-link:hover{text-decoration:underline}
 .tb-pick{
   display:flex;align-items:center;gap:10px;
-  padding:6px 0;border-bottom:1px solid #1a2540;font-size:.78rem;flex-wrap:wrap
+  padding:6px 0;border-bottom:1px solid var(--border);font-size:.78rem;flex-wrap:wrap
 }
 .tb-pick:last-child{border-bottom:none}
-.tb-pick-num{width:18px;height:18px;border-radius:50%;background:#1e3a5f;color:#60a5fa;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-pick-num{width:18px;height:18px;border-radius:50%;background:oklch(11% 0.02 80);color:var(--gold);font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .tb-pick-league{color:var(--muted);min-width:120px;font-size:.68rem}
 .tb-pick-teams{flex:1;font-weight:600;color:var(--text);min-width:140px}
 .tb-pick-mkt{color:var(--sub)}
@@ -500,7 +516,7 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 .gp-row{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   margin-top:8px;padding:7px 10px;
-  background:#0a0f1a;border:1px solid #1e3050;border-radius:8px
+  background:var(--surface);border:1px solid var(--border);border-radius:8px
 }
 .gp-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
 .gp-range{font-size:.85rem;font-weight:800;color:var(--text);flex-shrink:0;min-width:28px}
@@ -510,10 +526,10 @@ body{background:var(--bg);color:var(--text);font-family:"Inter","Segoe UI",syste
 .gp-verdict{font-size:.72rem;font-weight:600;flex-shrink:0}
 
 /* FOOTER */
-.tabs{display:flex;background:#0a0f1e;border-bottom:1px solid var(--border);padding:0 28px}
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px}
 .tab{padding:12px 20px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;text-decoration:none;transition:all .15s}
 .tab:hover{color:var(--sub)}
-.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .footer{
   text-align:center;padding:28px;font-size:.68rem;
   color:var(--muted);border-top:1px solid var(--border);
@@ -668,14 +684,14 @@ def match_card_html(enriched):
         </div>'''
 
     if conf_label == "ALTA":
-        badge_style = "background:#0d2818;color:#4ade80;border:1px solid #166534"
+        badge_style = "background:oklch(10% 0.015 80);color:oklch(84% 0.19 80.46);border:1px solid oklch(61% 0.085 78 / 0.45)"
     elif conf_label == "MÉDIA":
-        badge_style = "background:#2a1f00;color:#fbbf24;border:1px solid #78350f"
+        badge_style = "background:oklch(7% 0.01 188);color:oklch(70% 0.12 188);border:1px solid oklch(49% 0.08 188 / 0.5)"
     else:
-        badge_style = "background:#2a0a0a;color:#f87171;border:1px solid #7f1d1d"
+        badge_style = "background:oklch(7% 0.01 35);color:oklch(72% 0.15 35);border:1px solid oklch(48% 0.1 35 / 0.5)"
 
     def bar(p, highlight):
-        color = "#60a5fa" if highlight else "#2d3748"
+        color = "oklch(84% 0.19 80.46)" if highlight else "oklch(78% 0 0 / 0.16)"
         return f'<div class="prob-bar"><div class="prob-bar-fill" style="width:{int(p*100)}%;background:{color}"></div></div>'
 
     o25_class = "extra-pill hot-green" if o25 >= 0.61 else "extra-pill"
@@ -760,14 +776,14 @@ def treble_banner_html(treble):
     if not treble:
         return ""
     mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
-    conf_col  = {"ALTA": "#4ade80", "MÉDIA": "#fbbf24", "BAIXA": "#f87171"}
+    conf_col  = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(72% 0.15 35)"}
     picks_html = ""
     for i, pk in enumerate(treble["picks"], 1):
-        col  = conf_col.get(pk.get("conf",""), "#94a3b8")
+        col  = conf_col.get(pk.get("conf",""), "oklch(62% 0 0)")
         mkt  = mkt_label.get(pk["market"], pk["market"])
         odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
-        conf_bg = {"ALTA": "#0d2818", "MÉDIA": "#2a1f00", "BAIXA": "#2a0a0a"}.get(pk.get("conf",""), "#1a1a2e")
-        conf_bd = {"ALTA": "#166534", "MÉDIA": "#78350f", "BAIXA": "#7f1d1d"}.get(pk.get("conf",""), "#374151")
+        conf_bg = {"ALTA": "oklch(10% 0.015 80)", "MÉDIA": "oklch(7% 0.01 188)", "BAIXA": "oklch(7% 0.01 35)"}.get(pk.get("conf",""), "oklch(8% 0.006 95)")
+        conf_bd = {"ALTA": "oklch(61% 0.085 78 / 0.45)", "MÉDIA": "oklch(49% 0.08 188 / 0.5)", "BAIXA": "oklch(48% 0.1 35 / 0.5)"}.get(pk.get("conf",""), "oklch(52% 0 0 / 0.3)")
         picks_html += (
             f'<div class="tb-pick">'
             f'<span class="tb-pick-num">{i}</span>'
