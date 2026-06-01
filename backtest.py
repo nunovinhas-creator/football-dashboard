@@ -27,6 +27,24 @@ EMAIL_TO     = "nunovinhas@gmail.com"
 
 _RETRY_DELAYS = [2, 5, 15]
 
+# Probabilidades (escala 0-1)
+_CONF_ALTA       = 0.65
+_CONF_MEDIA      = 0.45
+# Thresholds de pick — ver CLAUDE.md §Pick Thresholds
+_PICK_BTTS_MIN   = 61     # pb em escala 0-100 (backtest.py usa percentagem directa)
+_PICK_1X2_MIN    = 61     # best em escala 0-100
+_PICK_O25_XG     = 2.9    # xG total mínimo
+_PICK_XG_MIN     = 2.8    # xG total mínimo (informativo)
+# Cobertura mínima para marcar uma data como processada
+_COVERAGE_MIN    = 0.7
+# Triplas presas em pending expiram ao fim de N dias
+_TREBLE_EXPIRY   = 3
+# Ficheiros preds_*.json mantidos durante N dias
+_PREDS_KEEP_DAYS = 60
+# Tamanho de página para paginação BSD API
+_PAGE_SIZE       = 50
+_GA_ID           = "G-WE48R4KL96"
+
 def _log(level, msg):
     ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
     print(f"[{ts}] {level:5s} {msg}")
@@ -35,23 +53,28 @@ def _log(level, msg):
 # CAMADA DE DADOS — BSD API
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get(path, params=None, _retry=0):
-    try:
-        r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
-        if (r.status_code == 429 or r.status_code >= 500) and _retry < len(_RETRY_DELAYS):
-            wait = _RETRY_DELAYS[_retry]
-            _log("WARN", f"HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
+def get(path, params=None):
+    # Síncrono com dashboard.py — qualquer alteração deve ser replicada
+    last_exc = None
+    for attempt in range(len(_RETRY_DELAYS) + 1):
+        if attempt:
+            wait = _RETRY_DELAYS[attempt - 1]
+            _log("WARN", f"aguardar {wait}s (tentativa {attempt}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
-            return get(path, params, _retry + 1)
-        r.raise_for_status()
-        return r.json()
-    except requests.exceptions.RequestException as e:
-        if _retry < len(_RETRY_DELAYS):
-            wait = _RETRY_DELAYS[_retry]
-            _log("WARN", f"request falhou ({e}) — aguardar {wait}s")
-            time.sleep(wait)
-            return get(path, params, _retry + 1)
-        raise
+        try:
+            r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=20)
+            if r.status_code == 429 or r.status_code >= 500:
+                _log("WARN", f"HTTP {r.status_code} — tentativa {attempt+1}/{len(_RETRY_DELAYS)+1}")
+                last_exc = requests.exceptions.ConnectionError(f"HTTP {r.status_code}")
+                continue
+            r.raise_for_status()
+            try:
+                return r.json()
+            except ValueError as e:
+                raise requests.exceptions.RequestException(f"JSON inválido: {e}") from e
+        except requests.exceptions.RequestException as e:
+            last_exc = e
+    raise last_exc or requests.exceptions.RequestException("todas as tentativas falharam")
 
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -133,7 +156,7 @@ def fetch_pinnacle_odds(event_id):
             slug = b.get("bookmaker_slug", "")
             if "pinnacle" in name or slug == "pinnacle":
                 return b
-    except Exception:
+    except (requests.exceptions.RequestException, ValueError):
         pass
     return {}
 
@@ -143,7 +166,7 @@ def fetch_todays_predictions():
     offset = 0
     while True:
         try:
-            data = get("/predictions/", {"limit": 50, "offset": offset})
+            data = get("/predictions/", {"limit": _PAGE_SIZE, "offset": offset})
             results = data.get("results", [])
             if not results:
                 break
@@ -157,9 +180,12 @@ def fetch_todays_predictions():
                     all_preds.append(r)
             if not data.get("next"):
                 break
-            offset += 50
+            offset += _PAGE_SIZE
         except Exception as e:
-            _log("WARN", f"offset={offset}: {e}")
+            if offset == 0:
+                _log("ERR", f"predicoes falhou na primeira pagina: {e}")
+                raise
+            _log("WARN", f"offset={offset}: {e} — usando {len(all_preds)} predicoes ja obtidas")
             break
     return all_preds
 
@@ -188,6 +214,24 @@ def fetch_event_result(event_id):
 # pick_o25:  xG total >= 2.9 (o po do modelo estava descalibrado a 47% em qualquer threshold)
 # pick_btts: pb >= 61% E confiança ALTA ou MÉDIA (BAIXA estava a 45%)
 # pick_xg:   xG total >= 2.8 (antes era "sempre true" — 100% das linhas)
+
+def _calc_goals_prediction(btts_frac, o25_frac, xgt):
+    """Previsão de golos: xG (base) + BTTS (ajuste) + Poisson O2.5. btts_frac e o25_frac em 0-1."""
+    if btts_frac >= 0.55:
+        pull   = min((btts_frac - 0.55) / 0.40, 1.0)
+        gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
+    else:
+        gp_adj = xgt
+    p_le2    = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
+    xg_poiss = max(0.0, min(1.0, 1.0 - p_le2))
+    o25_comb = round(o25_frac * 0.55 + xg_poiss * 0.45, 3)
+    gp_low   = max(0, int(gp_adj))
+    return {
+        "gp_adj":     round(gp_adj, 2),
+        "o25_comb":   o25_comb,
+        "gp_low":     gp_low,
+        "pick_goals": o25_comb >= 0.60 and btts_frac >= 0.60,
+    }
 
 def make_record(pred, result):
     event   = pred.get("event", {})
@@ -222,29 +266,15 @@ def make_record(pred, result):
     elif best == pd: pred_r = "D"
     else:            pred_r = "A"
 
-    if conf_val >= 0.65:   conf = "ALTA"
-    elif conf_val >= 0.45: conf = "MÉDIA"
-    else:                  conf = "BAIXA"
+    if conf_val >= _CONF_ALTA:   conf = "ALTA"
+    elif conf_val >= _CONF_MEDIA: conf = "MÉDIA"
+    else:                         conf = "BAIXA"
 
     event_date = event.get("event_date", "")
     dt = parse_dt(event_date)
     date_str = dt.strftime("%Y-%m-%d") if dt else event_date[:10]
 
-    # Previsão de golos: xG (base) + BTTS (ajuste de distribuição) + Poisson O25
-    bp_frac = pb / 100
-    op_frac = po / 100
-    if bp_frac >= 0.55:
-        pull   = min((bp_frac - 0.55) / 0.40, 1.0)
-        gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
-    else:
-        gp_adj = xgt
-    # P(Over 2.5) via Poisson(lambda=gp_adj)
-    _p_le2    = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
-    xg_poiss  = max(0.0, min(1.0, 1.0 - _p_le2))
-    o25_comb  = round(op_frac * 0.55 + xg_poiss * 0.45, 3)
-    gp_low    = max(0, int(gp_adj))
-    gp_high   = gp_low + 1
-    pick_goals = o25_comb >= 0.60 and bp_frac >= 0.60  # sinal forte Over 2.5 + BTTS
+    gp = _calc_goals_prediction(pb / 100, po / 100, xgt)
 
     return {
         "date":     date_str,
@@ -257,20 +287,19 @@ def make_record(pred, result):
         "po": round(po,1), "pb": round(pb,1), "xg": xgt,
         "conf": conf,
         "pred": pred_r, "real": real,
-        "pick_1x2":  best >= 61 and conf == "MÉDIA",
-        "pick_o25":  xgt >= 2.9 and conf in ("ALTA", "MÉDIA"),
-        "pick_btts": pb >= 61 and conf in ("ALTA", "MÉDIA"),
-        "pick_xg":   xgt >= 2.8,
+        "pick_1x2":  best >= _PICK_1X2_MIN and conf == "MÉDIA",
+        "pick_o25":  xgt >= _PICK_O25_XG and conf in ("ALTA", "MÉDIA"),
+        "pick_btts": pb >= _PICK_BTTS_MIN and conf in ("ALTA", "MÉDIA"),
+        "pick_xg":   xgt >= _PICK_XG_MIN,
         "hit_1x2":   pred_r == real,
         "hit_o25":   goals > 2,
         "hit_btts":  hs > 0 and as_ > 0,
-        # Previsão de golos (xG + BTTS combinados)
-        "pred_goals":     round(gp_adj, 2),
-        "pred_goals_range": f"{gp_low}-{gp_high}",
-        "o25_combined":   o25_comb,
-        "pick_goals":     pick_goals,
-        "hit_goal_range": gp_low <= goals <= gp_high,
-        "hit_goals_o25":  goals > 2,
+        "pred_goals":       gp["gp_adj"],
+        "pred_goals_range": f"{gp['gp_low']}-{gp['gp_low']+1}",
+        "o25_combined":     gp["o25_comb"],
+        "pick_goals":       gp["pick_goals"],
+        "hit_goal_range":   gp["gp_low"] <= goals <= gp["gp_low"] + 1,
+        "hit_goals_o25":    goals > 2,
         # Pinnacle odds guardadas no momento da previsão (para ROI futuro)
         "pin_home":  pin.get("home_odds"),
         "pin_draw":  pin.get("draw_odds"),
@@ -286,28 +315,17 @@ def migrate_picks(records):
         best = max(r.get("ph", 0), r.get("pd", 0), r.get("pa", 0))
         pb   = r.get("pb", 0)
         xgt  = r.get("xg", 0)
-        r["pick_1x2"]  = best >= 61 and conf == "MÉDIA"
-        r["pick_o25"]  = xgt >= 2.9 and conf in ("ALTA", "MÉDIA")
-        r["pick_btts"] = pb >= 61 and conf in ("ALTA", "MÉDIA")
-        r["pick_xg"]   = xgt >= 2.8
-        # Previsão de golos xG+BTTS+Poisson
-        bp_f = pb / 100
-        op_f = r.get("po", 0) / 100
-        if bp_f >= 0.55:
-            pull   = min((bp_f - 0.55) / 0.40, 1.0)
-            gp_adj = xgt + pull * max(0.0, 2.2 - xgt) * 0.40
-        else:
-            gp_adj = xgt
-        _p2   = math.exp(-gp_adj) * (1.0 + gp_adj + gp_adj**2 / 2.0) if gp_adj > 0 else 1.0
-        xgp   = max(0.0, min(1.0, 1.0 - _p2))
-        o25c  = round(op_f * 0.55 + xgp * 0.45, 3)
-        gp_low = max(0, int(gp_adj))
-        r["pred_goals"]       = round(gp_adj, 2)
-        r["pred_goals_range"] = f"{gp_low}-{gp_low+1}"
-        r["o25_combined"]     = o25c
-        r["pick_goals"]       = o25c >= 0.60 and bp_f >= 0.60
+        r["pick_1x2"]  = best >= _PICK_1X2_MIN and conf == "MÉDIA"
+        r["pick_o25"]  = xgt >= _PICK_O25_XG and conf in ("ALTA", "MÉDIA")
+        r["pick_btts"] = pb >= _PICK_BTTS_MIN and conf in ("ALTA", "MÉDIA")
+        r["pick_xg"]   = xgt >= _PICK_XG_MIN
+        gp = _calc_goals_prediction(pb / 100, r.get("po", 0) / 100, xgt)
+        r["pred_goals"]       = gp["gp_adj"]
+        r["pred_goals_range"] = f"{gp['gp_low']}-{gp['gp_low']+1}"
+        r["o25_combined"]     = gp["o25_comb"]
+        r["pick_goals"]       = gp["pick_goals"]
         goals = r.get("goals", -1)
-        r["hit_goal_range"]   = gp_low <= goals <= gp_low + 1 if goals >= 0 else False
+        r["hit_goal_range"]   = gp["gp_low"] <= goals <= gp["gp_low"] + 1 if goals >= 0 else False
     return records
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -344,18 +362,20 @@ def build_daily_treble(preds):
         pa       = float(mr.get("prob_away") or 0)
         conf_val = float(model.get("confidence") or 0)
 
-        if conf_val >= 0.65:   conf = "ALTA"
-        elif conf_val >= 0.45: conf = "MÉDIA"
-        else:                  conf = "BAIXA"
+        if conf_val >= _CONF_ALTA:   conf = "ALTA"
+        elif conf_val >= _CONF_MEDIA: conf = "MÉDIA"
+        else:                         conf = "BAIXA"
 
         league = event.get("league_name", "?")
         eid    = event.get("id")
 
         if league in EXCLUDED_LEAGUES:
             continue
+        if not eid:
+            continue
 
         # Prioridade 1: BTTS ALTA ou MÉDIA
-        if pb >= 61 and conf in ("ALTA", "MÉDIA"):
+        if pb >= _PICK_BTTS_MIN and conf in ("ALTA", "MÉDIA"):
             pin_odds = pin.get("btts_yes")
             candidates.append({
                 "priority": 1,
@@ -372,7 +392,7 @@ def build_daily_treble(preds):
 
         # Prioridade 2: 1X2 MÉDIA
         best = max(ph, pd_v, pa)
-        if best >= 61 and conf == "MÉDIA":
+        if best >= _PICK_1X2_MIN and conf == "MÉDIA":
             if best == ph:     side, ok = "H", "home_odds"
             elif best == pd_v: side, ok = "D", "draw_odds"
             else:              side, ok = "A", "away_odds"
@@ -439,6 +459,8 @@ def score_treble(treble, records_for_date):
         if not rec:  # fallback por nome (retrocompatibilidade com picks antigos)
             key = (pick["league"], pick["home"], pick["away"])
             rec = by_match.get(key)
+            if rec:
+                _log("WARN", f"score_treble: event_id não encontrado, fallback por nome ({pick['home']} vs {pick['away']})")
         if not rec:
             return None  # resultado ainda não disponível
         market = pick["market"]
@@ -471,7 +493,7 @@ def score_treble(treble, records_for_date):
         "profit_1u":     profit,
     }
 
-def cleanup_old_preds(days_to_keep=60):
+def cleanup_old_preds(days_to_keep=_PREDS_KEEP_DAYS):
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days_to_keep)).strftime("%Y-%m-%d")
     removed = 0
     for fname in sorted(os.listdir("docs")):
@@ -487,7 +509,7 @@ def cleanup_old_preds(days_to_keep=60):
     if removed:
         _log("INFO", f"cleanup: {removed} snapshots antigos removidos (>{days_to_keep} dias)")
 
-def cleanup_stuck_trebles(trebles, max_days=3):
+def cleanup_stuck_trebles(trebles, max_days=_TREBLE_EXPIRY):
     today_dt   = datetime.now(timezone.utc)
     still_pending = []
     for treble in trebles.get("pending", []):
@@ -530,7 +552,7 @@ def calc_stats(records, pick_key, hit_key, label):
     rolling_30 = round(r_hits / len(recent) * 100, 1) if recent else None
     by_conf = {}
     for c in ["ALTA", "MÉDIA", "BAIXA"]:
-        sub = [r for r in subset if r["conf"] == c]
+        sub = [r for r in subset if r.get("conf", "BAIXA") == c]
         if sub:
             h = sum(1 for r in sub if r.get(hit_key))
             by_conf[c] = {"picks": len(sub), "hits": h, "rate": round(h/len(sub)*100,1)}
@@ -837,15 +859,14 @@ def xg_analysis_html(records):
     )
 
     # Tabela por liga
-    league_rows = ""
+    league_row_parts = []
     for lg in data["league_stats"]:
         diff = lg["diff"]
         diff_col = "oklch(70% 0.12 188)" if diff > 0.3 else ("oklch(58% 0.15 35)" if diff < -0.3 else "oklch(84% 0.19 80.46)")
         diff_str = f'{"+" if diff>=0 else ""}{diff:.2f}'
-        max_v    = max(lg["avg_xg"], lg["avg_goals"]) or 1
         xg_w     = int(lg["avg_xg"] / 5 * 100)
         g_w      = int(lg["avg_goals"] / 5 * 100)
-        league_rows += (
+        league_row_parts.append(
             f'<tr>'
             f'<td class="tdl" style="white-space:nowrap">{lg["league"]}</td>'
             f'<td class="tdn" style="color:var(--muted)">{lg["n"]}</td>'
@@ -860,6 +881,7 @@ def xg_analysis_html(records):
             f'<td class="tdn" style="color:{diff_col};font-weight:700;font-size:.9rem">{diff_str}</td>'
             f'</tr>'
         )
+    league_rows = "".join(league_row_parts)
     league_html = (
         f'<div class="xga-panel">'
         f'<div class="xga-panel-title">Calibração por Liga (mín. 3 jogos)</div>'
@@ -950,14 +972,14 @@ def btts_monitor_html(records):
         if rate < 65:  return ("MÉDIO", "oklch(84% 0.19 80.46)","oklch(8% 0.014 80)")
         return              ("BAIXO", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
 
-    table_rows = ""
+    table_row_parts = []
     for r in rows:
         lbl, col, bg = risk(r["raw_rate"])
         bar_w = int(r["raw_rate"])
         pick_str = f'{r["pick_rate"]:.0f}%' if r["pick_rate"] is not None else "–"
         pick_col = rc(r["pick_rate"]) if r["pick_rate"] is not None else "oklch(52% 0 0)"
         excl = " 🚫" if r["league"] in EXCLUDED_LEAGUES else ""
-        table_rows += (
+        table_row_parts.append(
             f'<tr>'
             f'<td class="tdl" style="white-space:nowrap">{r["league"]}{excl}</td>'
             f'<td class="tdn" style="color:var(--muted)">{r["n"]}</td>'
@@ -971,6 +993,7 @@ def btts_monitor_html(records):
             f'padding:2px 7px;border-radius:10px;background:{bg};color:{col}">{lbl}</span></td>'
             f'</tr>'
         )
+    table_rows = "".join(table_row_parts)
 
     body = (
         f'<div class="stitle" style="margin-top:28px">Monitor de Ligas — BTTS</div>'
@@ -1041,24 +1064,25 @@ def treble_section_html(trebles_data):
 
     # Tripla de hoje
     if today_treble:
-        picks_html = ""
+        pick_parts = []
         for i, pk in enumerate(today_treble["picks"], 1):
             col   = conf_color.get(pk.get("conf",""), "oklch(62% 0 0)")
-            mkt   = mkt_label.get(pk["market"], pk["market"])
+            mkt   = mkt_label.get(pk.get("market",""), pk.get("market","?"))
             odds  = f"{pk['odds']:.2f}" if pk.get("odds") else "–"
-            picks_html += (
+            pick_parts.append(
                 f'<div class="tp">'
                 f'<span class="tpn">{i}</span>'
                 f'<div class="tpi">'
-                f'<div class="tpl">{pk["league"]}</div>'
-                f'<div class="tpm">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</div>'
+                f'<div class="tpl">{pk.get("league","")}</div>'
+                f'<div class="tpm">{pk.get("home","?")} <span style="color:var(--muted)">vs</span> {pk.get("away","?")}</div>'
                 f'</div>'
                 f'<div class="tpr">'
                 f'<span class="tpk">{mkt}</span>'
-                f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+                f'<span style="color:{col};font-weight:700">{int((pk.get("prob") or 0)*100)}%</span>'
                 f'<span class="tpo">@{odds}</span>'
                 f'</div></div>'
             )
+        picks_html = "".join(pick_parts)
         combined = f"{today_treble['combined_odds']:.2f}" if today_treble.get("combined_odds") else "–"
         today_html = (
             f'<div class="tb-today">'
@@ -1411,9 +1435,9 @@ def build_html(history, trebles_data=None):
         f'<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'<title>Matemática Da Bola — Backtest</title>'
-        f'<script async src="https://www.googletagmanager.com/gtag/js?id=G-WE48R4KL96"></script>'
+        f'<script async src="https://www.googletagmanager.com/gtag/js?id={_GA_ID}"></script>'
         f'<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}'
-        f'gtag("js",new Date());gtag("config","G-WE48R4KL96");</script>'
+        f'gtag("js",new Date());gtag("config","{_GA_ID}");</script>'
         f'<style>{css}</style></head><body>'
         f'<div class="hdr"><h1>⚽ Matemática Da Bola</h1>'
         f'<div class="meta">Backtest actualizado em {now}</div></div>'
@@ -1430,17 +1454,8 @@ def build_html(history, trebles_data=None):
 # PONTO DE ENTRADA
 # ══════════════════════════════════════════════════════════════════════════════
 
-def main():
-    today = today_str()
-    os.makedirs("docs", exist_ok=True)
-
-    history = load_history()
-    trebles = load_trebles()
-
-    # Migrar todos os registos existentes para os novos thresholds de pick
-    history["records"] = migrate_picks(history.get("records", []))
-
-    # ── MODO SAVE ────────────────────────────────────────────────────────────
+def _run_save_mode(today, trebles):
+    """Guarda predições do dia e constrói a tripla. Devolve trebles actualizado."""
     save_file   = preds_file(today)
     preds_saved = []
     if os.path.exists(save_file):
@@ -1473,11 +1488,7 @@ def main():
         else:
             _log("INFO", f"SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
 
-    # Tentar construir tripla do dia (só bloqueia se já existe uma tripla "pending")
-    today_built = any(
-        t.get("date") == today and t.get("status") == "pending"
-        for t in trebles.get("pending", []) + trebles.get("history", [])
-    )
+    today_built = any(t.get("date") == today for t in trebles.get("pending", []))
     if not today_built and os.path.exists(save_file):
         try:
             with open(save_file, encoding="utf-8") as f:
@@ -1498,21 +1509,20 @@ def main():
         except Exception as e:
             _log("ERR", f"Erro ao construir tripla: {e}")
 
-    # ── MODO SCORE ───────────────────────────────────────────────────────────
-    processed = history.get("dates_processed", [])
+    return trebles
 
+def _run_score_mode(history, today):
+    """Processa resultados de todas as datas pendentes. Devolve (history, n_new_records)."""
+    processed = history.get("dates_processed", [])
     all_pred_files = [
         f for f in os.listdir("docs")
         if f.startswith("preds_") and f.endswith(".json")
     ]
-    pending_dates = []
-    for fname in sorted(all_pred_files):
-        date_str = fname.replace("preds_","").replace(".json","")
-        if date_str == today:
-            continue
-        if date_str in processed:
-            continue
-        pending_dates.append(date_str)
+    pending_dates = [
+        fname.replace("preds_", "").replace(".json", "")
+        for fname in sorted(all_pred_files)
+        if fname.replace("preds_", "").replace(".json", "") not in (today, *processed)
+    ]
 
     _log("INFO", f"Datas pendentes para SCORE: {pending_dates or 'nenhuma'}")
 
@@ -1546,25 +1556,38 @@ def main():
         _log("INFO", f"{found}/{len(preds)} com resultado | {not_finished} sem resultado")
 
         coverage = found / len(preds) if preds else 0
-        if coverage >= 0.7:
-            history["records"] = [r for r in history.get("records",[]) if r.get("date") != date_str]
+        if coverage >= _COVERAGE_MIN:
+            history["records"] = [r for r in history.get("records", []) if r.get("date") != date_str]
             history["records"].extend(new_records)
             history["dates_processed"] = list(set(processed + [date_str]))
             processed = history["dates_processed"]
             new_records_total += len(new_records)
             _log("INFO", f"{date_str} marcado como processado ({coverage:.0%} cobertura)")
         else:
-            history["records"] = [r for r in history.get("records",[]) if r.get("date") != date_str]
-            history["records"].extend(new_records)
             history.setdefault("dates_partial", {})[date_str] = found
             _log("INFO", f"{date_str} parcial ({coverage:.0%}) — tentará de novo amanhã")
 
-        save_history(history)
+    return history, new_records_total
+
+def main():
+    today = today_str()
+    os.makedirs("docs", exist_ok=True)
+
+    history = load_history()
+    trebles = load_trebles()
+
+    # Migrar todos os registos existentes para os novos thresholds de pick
+    history["records"] = migrate_picks(history.get("records", []))
+
+    trebles = _run_save_mode(today, trebles)
+
+    history, new_records_total = _run_score_mode(history, today)
+    save_history(history)
 
     if new_records_total > 0:
         _log("INFO", f"Total acumulado: {len(history['records'])} jogos")
 
-    # Expirar triplas que ficaram presas em pending há mais de 3 dias
+    # Expirar triplas que ficaram presas em pending
     trebles = cleanup_stuck_trebles(trebles)
 
     # Pontuar triplas pendentes cujas datas já foram processadas
@@ -1587,7 +1610,6 @@ def main():
     trebles["pending"] = still_pending
     save_trebles(trebles)
 
-    # Gerar HTML com secção de triplas
     html = build_html(history, trebles)
     _tmp = "docs/backtest.html.tmp"
     with open(_tmp, "w", encoding="utf-8") as f:
@@ -1597,14 +1619,13 @@ def main():
 
     cleanup_old_preds()
 
-    # Relatório diário às 07:00 UTC, ou forçado em workflow_dispatch
     if datetime.now(timezone.utc).hour == 7 or os.environ.get("FORCE_EMAIL"):
         send_email_report(history, trebles)
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def _email_html(history, trebles):  # noqa: C901
-    records  = migrate_picks(history.get("records", []))
+    records  = history.get("records", [])  # já migrado em main()
     s_btts   = calc_stats(records, "pick_btts", "hit_btts", "BTTS (ALTA+MÉDIA, pb≥61%)")
     s_1x2    = calc_stats(records, "pick_1x2",  "hit_1x2",  "1X2 (MÉDIA, best≥61%)")
     s_o25    = calc_stats(records, "pick_o25",  "hit_o25",  "Over 2.5 (xG≥2.9, ALTA+MÉDIA)")

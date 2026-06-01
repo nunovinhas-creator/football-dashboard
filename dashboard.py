@@ -1,5 +1,5 @@
 """
-Matemática Da Bola — BSD API v2 (fixed)
+Matemática Da Bola — dashboard BSD API v2
 """
 
 import os
@@ -7,8 +7,14 @@ import json
 import math
 import time
 import requests
+from html import escape as _he
 from collections import Counter
 from datetime import datetime, timezone, timedelta
+
+# Probabilidades (escala 0-1)
+_CONF_ALTA  = 0.65
+_CONF_MEDIA = 0.45
+_GA_ID      = "G-WE48R4KL96"
 
 BSD_KEY  = os.environ["BSD_API_KEY"]
 TG_TOKEN = os.environ["TG_TOKEN"]
@@ -29,23 +35,28 @@ def _log(level, msg):
 # CAMADA DE DADOS — BSD API
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get(path, params=None, _retry=0):
-    try:
-        r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
-        if (r.status_code == 429 or r.status_code >= 500) and _retry < len(_RETRY_DELAYS):
-            wait = _RETRY_DELAYS[_retry]
-            _log("WARN", f"HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
+def get(path, params=None):
+    # Síncrono com backtest.py — qualquer alteração deve ser replicada
+    last_exc = None
+    for attempt in range(len(_RETRY_DELAYS) + 1):
+        if attempt:
+            wait = _RETRY_DELAYS[attempt - 1]
+            _log("WARN", f"aguardar {wait}s (tentativa {attempt}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
-            return get(path, params, _retry + 1)
-        r.raise_for_status()
-        return r.json()
-    except requests.exceptions.RequestException as e:
-        if _retry < len(_RETRY_DELAYS):
-            wait = _RETRY_DELAYS[_retry]
-            _log("WARN", f"request falhou ({e}) — aguardar {wait}s")
-            time.sleep(wait)
-            return get(path, params, _retry + 1)
-        raise
+        try:
+            r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
+            if r.status_code == 429 or r.status_code >= 500:
+                _log("WARN", f"HTTP {r.status_code} — tentativa {attempt+1}/{len(_RETRY_DELAYS)+1}")
+                last_exc = requests.exceptions.ConnectionError(f"HTTP {r.status_code}")
+                continue
+            r.raise_for_status()
+            try:
+                return r.json()
+            except ValueError as e:
+                raise requests.exceptions.RequestException(f"JSON inválido: {e}") from e
+        except requests.exceptions.RequestException as e:
+            last_exc = e
+    raise last_exc or requests.exceptions.RequestException("todas as tentativas falharam")
 
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -83,7 +94,10 @@ def fetch_all_predictions():
                 break
             offset += limit
         except Exception as e:
-            _log("WARN", f"predicoes offset={offset} falhou: {e}")
+            if offset == 0:
+                _log("ERR", f"predicoes falhou na primeira pagina: {e}")
+                raise
+            _log("WARN", f"predicoes offset={offset} falhou — usando {len(all_preds)} ja obtidas: {e}")
             break
     return all_preds
 
@@ -263,9 +277,9 @@ def confidence_badge(conf):
     if conf is None:
         return ("MÉDIA", "oklch(70% 0.12 188)", "oklch(7% 0.01 188)")
     c = float(conf)
-    if c >= 0.65:   return ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)")
-    elif c >= 0.45: return ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
-    else:           return ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)")
+    if c >= _CONF_ALTA:   return ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)")
+    elif c >= _CONF_MEDIA: return ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
+    else:                  return ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)")
 
 def tip_label(hw, dr, aw, o25, conf):
     best = max(hw, dr, aw)
@@ -634,10 +648,10 @@ def match_card_html(enriched):
     conf   = enriched.get("confidence")
     result = enriched.get("result")
 
-    home   = m.get("home_team", "?")
-    away   = m.get("away_team", "?")
-    league = m.get("_league_name", "")
-    flag   = league_flag(league)
+    home   = _he(m.get("home_team", "?") or "?")
+    away   = _he(m.get("away_team", "?") or "?")
+    league = _he(m.get("_league_name", "") or "")
+    flag   = league_flag(m.get("_league_name", ""))
     ko_raw = m.get("event_date", "")
 
     ko_dt = parse_dt(ko_raw)
@@ -664,7 +678,6 @@ def match_card_html(enriched):
     best = max(hw, dr, aw)
 
     status = m.get("status", "notstarted")
-    # FIX BUG 3: is_finished agora correcto
     is_finished = (status == "finished")
     is_live     = status in ("inprogress", "live", "halftime")
     card_class  = "card finished" if is_finished else ("card live-now" if is_live else "card")
@@ -777,41 +790,42 @@ def treble_banner_html(treble):
         return ""
     mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     conf_col  = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(72% 0.15 35)"}
-    picks_html = ""
-    for i, pk in enumerate(treble["picks"], 1):
-        col  = conf_col.get(pk.get("conf",""), "oklch(62% 0 0)")
-        mkt  = mkt_label.get(pk["market"], pk["market"])
+    pick_parts = []
+    for i, pk in enumerate(treble.get("picks", []), 1):
+        mkt_key = pk.get("market", "")
+        col  = conf_col.get(pk.get("conf", ""), "oklch(62% 0 0)")
+        mkt  = mkt_label.get(mkt_key, mkt_key or "?")
         odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
         conf_bg = {"ALTA": "oklch(10% 0.015 80)", "MÉDIA": "oklch(7% 0.01 188)", "BAIXA": "oklch(7% 0.01 35)"}.get(pk.get("conf",""), "oklch(8% 0.006 95)")
         conf_bd = {"ALTA": "oklch(61% 0.085 78 / 0.45)", "MÉDIA": "oklch(49% 0.08 188 / 0.5)", "BAIXA": "oklch(48% 0.1 35 / 0.5)"}.get(pk.get("conf",""), "oklch(52% 0 0 / 0.3)")
-        picks_html += (
+        pick_parts.append(
             f'<div class="tb-pick">'
             f'<span class="tb-pick-num">{i}</span>'
-            f'<span class="tb-pick-league">{pk["league"]}</span>'
-            f'<span class="tb-pick-teams">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</span>'
+            f'<span class="tb-pick-league">{pk.get("league", "")}</span>'
+            f'<span class="tb-pick-teams">{pk.get("home", "?")} <span style="color:var(--muted)">vs</span> {pk.get("away", "?")}</span>'
             f'<span class="tb-pick-mkt">{mkt}</span>'
-            f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+            f'<span style="color:{col};font-weight:700">{int((pk.get("prob") or 0) * 100)}%</span>'
             f'<span class="tb-pick-conf" style="background:{conf_bg};color:{col};border:1px solid {conf_bd}">{pk.get("conf","")}</span>'
             f'<span class="tb-pick-odds">{odds}</span>'
             f'</div>'
         )
+    picks_html = "".join(pick_parts)
     combined = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "–"
     return (
         f'<div class="treble-banner">'
         f'<div class="treble-banner-hdr">'
-        f'<span>🎯 Tripla do Dia — {treble["date"]}</span>'
+        f'<span>🎯 Tripla do Dia — {treble.get("date", "")}</span>'
         f'<span class="treble-banner-odds"><a href="backtest.html" class="treble-link">Histórico &amp; ROI →</a></span>'
         f'</div>'
         f'{picks_html}'
         f'</div>'
     )
 
-def build_html(enriched_list):
+def build_html(enriched_list, todays_treble=None):
     today = today_str()
     now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     with_data = [e for e in enriched_list if has_pred_data(e["pred"])]
-    todays_treble = load_todays_treble()
     banner_html   = treble_banner_html(todays_treble)
 
     leagues  = sorted(set(e["match"].get("_league_name","") for e in with_data))
@@ -826,8 +840,8 @@ def build_html(enriched_list):
     low_conf    = conf_counts["BAIXA"]
     total       = len(with_data)
 
-    league_opts = "".join(f'<option value="{l}">{league_flag(l)} {l}</option>' for l in leagues)
-    date_opts   = "".join(f'<option value="{d}">{d}</option>' for d in dates)
+    league_opts = "".join(f'<option value="{_he(l)}">{league_flag(l)} {_he(l)}</option>' for l in leagues)
+    date_opts   = "".join(f'<option value="{_he(d)}">{_he(d)}</option>' for d in dates)
 
     cards = "\n".join(match_card_html(e) for e in with_data)
 
@@ -837,8 +851,8 @@ def build_html(enriched_list):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matemática Da Bola — {today}</title>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-WE48R4KL96"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());gtag("config","G-WE48R4KL96");</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id={_GA_ID}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());gtag("config","{_GA_ID}");</script>
 <style>{_dashboard_css()}</style>
 </head>
 <body>
@@ -910,7 +924,7 @@ def escape_md(s):
         s = str(s).replace(ch, f'\\{ch}')
     return s
 
-def send_telegram(enriched_list):
+def send_telegram(enriched_list, todays_treble=None):
     today  = today_str()
     blocks = []
 
@@ -921,18 +935,19 @@ def send_telegram(enriched_list):
     ]
 
     # ── 1. Tripla do dia ──────────────────────────────────────────────────────
-    treble  = load_todays_treble()
+    treble  = todays_treble
     mkt_map = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     if treble:
         picks_lines = []
-        for i, pk in enumerate(treble["picks"], 1):
-            conf = pk.get("conf", "")
-            mkt  = mkt_map.get(pk["market"], pk["market"])
-            odds = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
-            flag = league_flag(pk["league"])
+        for i, pk in enumerate(treble.get("picks", []), 1):
+            conf    = pk.get("conf", "")
+            mkt_key = pk.get("market", "")
+            mkt     = mkt_map.get(mkt_key, mkt_key or "?")
+            odds    = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
+            flag    = league_flag(pk.get("league", ""))
             picks_lines.append(
-                f"`{i}` {flag} *{escape_md(pk['home'])} vs {escape_md(pk['away'])}*\n"
-                f"   {mkt} · {int(pk['prob']*100)}% · _{conf}_{odds}"
+                f"`{i}` {flag} *{escape_md(pk.get('home', '?'))} vs {escape_md(pk.get('away', '?'))}*\n"
+                f"   {mkt} · {int((pk.get('prob') or 0)*100)}% · _{conf}_{odds}"
             )
         combined = f"\n💰 Odds combinadas: *{treble['combined_odds']:.2f}*" if treble.get("combined_odds") else ""
         blocks.append("🎯 *TRIPLA DO DIA*\n" + "\n\n".join(picks_lines) + combined)
@@ -983,7 +998,9 @@ def send_telegram(enriched_list):
             )
         blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
 
-    # ── 3. Value com edge alto (>7%, BTTS ou Over2.5, confiança ALTA) ─────────
+    # ── 3. Value detectado (confiança ALTA; thresholds: 1X2=7%, BTTS=6%, Over2.5=5%) ──
+    _mkt_tg = {"BTTS": "🔁 BTTS", "Over2.5": "📈 Over 2.5",
+               "1X2": {"HOME": "🏠 1X2 Casa", "DRAW": "🤝 1X2 Empate", "AWAY": "✈️ 1X2 Fora"}}
     strong_value = []
     for e in enriched_list:
         conf_val = e.get("confidence")
@@ -994,8 +1011,6 @@ def send_telegram(enriched_list):
             continue
         vals = detect_value(e["pred"], e["odds"])
         for v in vals:
-            if v["market"] not in ("BTTS", "Over2.5"):  # mercados calibrados
-                continue
             m = e["match"]
             strong_value.append({
                 "league": m.get("_league_name", ""),
@@ -1008,28 +1023,30 @@ def send_telegram(enriched_list):
     if strong_value:
         val_lines = []
         for v in strong_value[:5]:
-            flag     = league_flag(v["league"])
-            mkt      = "🔁 BTTS" if v["market"] == "BTTS" else "📈 Over 2.5"
+            flag = league_flag(v["league"])
+            mkt_entry = _mkt_tg.get(v["market"], v["market"])
+            mkt = mkt_entry.get(v.get("side", ""), v["market"]) if isinstance(mkt_entry, dict) else mkt_entry
             odds_str = f" @{v['pin_odds']:.2f}" if v.get("pin_odds") else ""
             val_lines.append(
                 f"{flag} *{escape_md(v['home'])} vs {escape_md(v['away'])}*\n"
                 f"   {mkt} · ML {v['ml_prob']*100:.0f}% · fair {v['fair_prob']*100:.1f}%{odds_str} · edge *+{v['edge']*100:.1f}%*"
             )
-        blocks.append("💎 *VALUE EDGE ALTO (>7%)*\n" + "\n\n".join(val_lines))
+        blocks.append("💎 *VALUE DETECTADO*\n" + "\n\n".join(val_lines))
 
     # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
 
-    def _tg_send(text, _retry=0):
-        try:
-            r = requests.post(url, json={"chat_id": TG_CHAT, "text": text, "parse_mode": "Markdown"}, timeout=10)
-            r.raise_for_status()
-        except Exception as e:
-            if _retry < 2:
-                time.sleep(5)
-                _tg_send(text, _retry + 1)
-            else:
-                _log("WARN", f"telegram falhou após {_retry+1} tentativas: {e}")
+    def _tg_send(text):
+        for attempt in range(3):
+            try:
+                r = requests.post(url, json={"chat_id": TG_CHAT, "text": text, "parse_mode": "Markdown"}, timeout=10)
+                r.raise_for_status()
+                return
+            except Exception as e:
+                if attempt < 2:
+                    time.sleep(5)
+                else:
+                    _log("WARN", f"telegram falhou após {attempt+1} tentativas: {e}")
 
     header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
     _tg_send(header)
@@ -1107,10 +1124,10 @@ def main():
         except Exception as e:
             failed_count += 1
             _log("WARN", f"evento {eid} falhou — a saltar: {e}")
-            continue
-        finally:
             time.sleep(0.5)
+            continue
 
+        time.sleep(0.5)
         enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
 
     # 3. Ordenar por hora de kickoff
@@ -1123,7 +1140,8 @@ def main():
     if seen and len(enriched_list) < len(seen) * 0.5:
         raise RuntimeError(f"Demasiadas falhas: {failed_count}/{len(seen)} eventos únicos — a abortar para evitar dashboard vazio")
 
-    html = build_html(enriched_list)
+    todays_treble = load_todays_treble()
+    html = build_html(enriched_list, todays_treble)
     os.makedirs("docs", exist_ok=True)
     _tmp = "docs/dashboard.html.tmp"
     with open(_tmp, "w", encoding="utf-8") as f:
@@ -1131,8 +1149,9 @@ def main():
     os.replace(_tmp, "docs/dashboard.html")
     _log("INFO", "docs/dashboard.html guardado")
 
-    send_telegram(enriched_list)
+    send_telegram(enriched_list, todays_treble)
     _log("INFO", "Telegram enviado ✓")
 
 if __name__ == "__main__":
     main()
+
