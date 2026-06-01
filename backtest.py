@@ -353,6 +353,8 @@ def build_daily_treble(preds):
 
         if league in EXCLUDED_LEAGUES:
             continue
+        if not eid:
+            continue
 
         # Prioridade 1: BTTS ALTA ou MÉDIA
         if pb >= 61 and conf in ("ALTA", "MÉDIA"):
@@ -439,6 +441,8 @@ def score_treble(treble, records_for_date):
         if not rec:  # fallback por nome (retrocompatibilidade com picks antigos)
             key = (pick["league"], pick["home"], pick["away"])
             rec = by_match.get(key)
+            if rec:
+                _log("WARN", f"score_treble: event_id não encontrado, fallback por nome ({pick['home']} vs {pick['away']})")
         if not rec:
             return None  # resultado ainda não disponível
         market = pick["market"]
@@ -1554,12 +1558,10 @@ def main():
             new_records_total += len(new_records)
             _log("INFO", f"{date_str} marcado como processado ({coverage:.0%} cobertura)")
         else:
-            history["records"] = [r for r in history.get("records",[]) if r.get("date") != date_str]
-            history["records"].extend(new_records)
             history.setdefault("dates_partial", {})[date_str] = found
             _log("INFO", f"{date_str} parcial ({coverage:.0%}) — tentará de novo amanhã")
 
-        save_history(history)
+    save_history(history)
 
     if new_records_total > 0:
         _log("INFO", f"Total acumulado: {len(history['records'])} jogos")
@@ -1604,7 +1606,7 @@ def main():
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def _email_html(history, trebles):  # noqa: C901
-    records  = migrate_picks(history.get("records", []))
+    records  = history.get("records", [])  # já migrado em main()
     s_btts   = calc_stats(records, "pick_btts", "hit_btts", "BTTS (ALTA+MÉDIA, pb≥61%)")
     s_1x2    = calc_stats(records, "pick_1x2",  "hit_1x2",  "1X2 (MÉDIA, best≥61%)")
     s_o25    = calc_stats(records, "pick_o25",  "hit_o25",  "Over 2.5 (xG≥2.9, ALTA+MÉDIA)")

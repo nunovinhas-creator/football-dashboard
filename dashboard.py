@@ -83,8 +83,8 @@ def fetch_all_predictions():
                 break
             offset += limit
         except Exception as e:
-            _log("WARN", f"predicoes offset={offset} falhou: {e}")
-            break
+            _log("ERR", f"predicoes offset={offset} falhou: {e}")
+            raise
     return all_preds
 
 def fetch_odds(event_id):
@@ -806,12 +806,11 @@ def treble_banner_html(treble):
         f'</div>'
     )
 
-def build_html(enriched_list):
+def build_html(enriched_list, todays_treble=None):
     today = today_str()
     now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     with_data = [e for e in enriched_list if has_pred_data(e["pred"])]
-    todays_treble = load_todays_treble()
     banner_html   = treble_banner_html(todays_treble)
 
     leagues  = sorted(set(e["match"].get("_league_name","") for e in with_data))
@@ -910,7 +909,7 @@ def escape_md(s):
         s = str(s).replace(ch, f'\\{ch}')
     return s
 
-def send_telegram(enriched_list):
+def send_telegram(enriched_list, todays_treble=None):
     today  = today_str()
     blocks = []
 
@@ -921,7 +920,7 @@ def send_telegram(enriched_list):
     ]
 
     # ── 1. Tripla do dia ──────────────────────────────────────────────────────
-    treble  = load_todays_treble()
+    treble  = todays_treble
     mkt_map = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     if treble:
         picks_lines = []
@@ -1107,10 +1106,10 @@ def main():
         except Exception as e:
             failed_count += 1
             _log("WARN", f"evento {eid} falhou — a saltar: {e}")
-            continue
-        finally:
             time.sleep(0.5)
+            continue
 
+        time.sleep(0.5)
         enriched_list.append({"match": m, "pred": pred_norm, "odds": odds, "confidence": conf, "result": result})
 
     # 3. Ordenar por hora de kickoff
@@ -1123,7 +1122,8 @@ def main():
     if seen and len(enriched_list) < len(seen) * 0.5:
         raise RuntimeError(f"Demasiadas falhas: {failed_count}/{len(seen)} eventos únicos — a abortar para evitar dashboard vazio")
 
-    html = build_html(enriched_list)
+    todays_treble = load_todays_treble()
+    html = build_html(enriched_list, todays_treble)
     os.makedirs("docs", exist_ok=True)
     _tmp = "docs/dashboard.html.tmp"
     with open(_tmp, "w", encoding="utf-8") as f:
@@ -1131,7 +1131,7 @@ def main():
     os.replace(_tmp, "docs/dashboard.html")
     _log("INFO", "docs/dashboard.html guardado")
 
-    send_telegram(enriched_list)
+    send_telegram(enriched_list, todays_treble)
     _log("INFO", "Telegram enviado ✓")
 
 if __name__ == "__main__":
