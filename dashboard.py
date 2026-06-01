@@ -83,8 +83,11 @@ def fetch_all_predictions():
                 break
             offset += limit
         except Exception as e:
-            _log("ERR", f"predicoes offset={offset} falhou: {e}")
-            raise
+            if offset == 0:
+                _log("ERR", f"predicoes falhou na primeira pagina: {e}")
+                raise
+            _log("WARN", f"predicoes offset={offset} falhou — usando {len(all_preds)} ja obtidas: {e}")
+            break
     return all_preds
 
 def fetch_odds(event_id):
@@ -778,19 +781,20 @@ def treble_banner_html(treble):
     mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     conf_col  = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(72% 0.15 35)"}
     picks_html = ""
-    for i, pk in enumerate(treble["picks"], 1):
-        col  = conf_col.get(pk.get("conf",""), "oklch(62% 0 0)")
-        mkt  = mkt_label.get(pk["market"], pk["market"])
+    for i, pk in enumerate(treble.get("picks", []), 1):
+        mkt_key = pk.get("market", "")
+        col  = conf_col.get(pk.get("conf", ""), "oklch(62% 0 0)")
+        mkt  = mkt_label.get(mkt_key, mkt_key or "?")
         odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
         conf_bg = {"ALTA": "oklch(10% 0.015 80)", "MÉDIA": "oklch(7% 0.01 188)", "BAIXA": "oklch(7% 0.01 35)"}.get(pk.get("conf",""), "oklch(8% 0.006 95)")
         conf_bd = {"ALTA": "oklch(61% 0.085 78 / 0.45)", "MÉDIA": "oklch(49% 0.08 188 / 0.5)", "BAIXA": "oklch(48% 0.1 35 / 0.5)"}.get(pk.get("conf",""), "oklch(52% 0 0 / 0.3)")
         picks_html += (
             f'<div class="tb-pick">'
             f'<span class="tb-pick-num">{i}</span>'
-            f'<span class="tb-pick-league">{pk["league"]}</span>'
-            f'<span class="tb-pick-teams">{pk["home"]} <span style="color:var(--muted)">vs</span> {pk["away"]}</span>'
+            f'<span class="tb-pick-league">{pk.get("league", "")}</span>'
+            f'<span class="tb-pick-teams">{pk.get("home", "?")} <span style="color:var(--muted)">vs</span> {pk.get("away", "?")}</span>'
             f'<span class="tb-pick-mkt">{mkt}</span>'
-            f'<span style="color:{col};font-weight:700">{int(pk["prob"]*100)}%</span>'
+            f'<span style="color:{col};font-weight:700">{int((pk.get("prob") or 0) * 100)}%</span>'
             f'<span class="tb-pick-conf" style="background:{conf_bg};color:{col};border:1px solid {conf_bd}">{pk.get("conf","")}</span>'
             f'<span class="tb-pick-odds">{odds}</span>'
             f'</div>'
@@ -799,7 +803,7 @@ def treble_banner_html(treble):
     return (
         f'<div class="treble-banner">'
         f'<div class="treble-banner-hdr">'
-        f'<span>🎯 Tripla do Dia — {treble["date"]}</span>'
+        f'<span>🎯 Tripla do Dia — {treble.get("date", "")}</span>'
         f'<span class="treble-banner-odds"><a href="backtest.html" class="treble-link">Histórico &amp; ROI →</a></span>'
         f'</div>'
         f'{picks_html}'
@@ -982,7 +986,9 @@ def send_telegram(enriched_list, todays_treble=None):
             )
         blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
 
-    # ── 3. Value com edge alto (>7%, BTTS ou Over2.5, confiança ALTA) ─────────
+    # ── 3. Value detectado (confiança ALTA; thresholds: 1X2=7%, BTTS=6%, Over2.5=5%) ──
+    _mkt_tg = {"BTTS": "🔁 BTTS", "Over2.5": "📈 Over 2.5",
+               "1X2": {"HOME": "🏠 1X2 Casa", "DRAW": "🤝 1X2 Empate", "AWAY": "✈️ 1X2 Fora"}}
     strong_value = []
     for e in enriched_list:
         conf_val = e.get("confidence")
@@ -993,8 +999,6 @@ def send_telegram(enriched_list, todays_treble=None):
             continue
         vals = detect_value(e["pred"], e["odds"])
         for v in vals:
-            if v["market"] not in ("BTTS", "Over2.5"):  # mercados calibrados
-                continue
             m = e["match"]
             strong_value.append({
                 "league": m.get("_league_name", ""),
@@ -1007,14 +1011,15 @@ def send_telegram(enriched_list, todays_treble=None):
     if strong_value:
         val_lines = []
         for v in strong_value[:5]:
-            flag     = league_flag(v["league"])
-            mkt      = "🔁 BTTS" if v["market"] == "BTTS" else "📈 Over 2.5"
+            flag = league_flag(v["league"])
+            mkt_entry = _mkt_tg.get(v["market"], v["market"])
+            mkt = mkt_entry.get(v.get("side", ""), v["market"]) if isinstance(mkt_entry, dict) else mkt_entry
             odds_str = f" @{v['pin_odds']:.2f}" if v.get("pin_odds") else ""
             val_lines.append(
                 f"{flag} *{escape_md(v['home'])} vs {escape_md(v['away'])}*\n"
                 f"   {mkt} · ML {v['ml_prob']*100:.0f}% · fair {v['fair_prob']*100:.1f}%{odds_str} · edge *+{v['edge']*100:.1f}%*"
             )
-        blocks.append("💎 *VALUE EDGE ALTO (>7%)*\n" + "\n\n".join(val_lines))
+        blocks.append("💎 *VALUE DETECTADO*\n" + "\n\n".join(val_lines))
 
     # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"

@@ -159,7 +159,10 @@ def fetch_todays_predictions():
                 break
             offset += 50
         except Exception as e:
-            _log("WARN", f"offset={offset}: {e}")
+            if offset == 0:
+                _log("ERR", f"predicoes falhou na primeira pagina: {e}")
+                raise
+            _log("WARN", f"offset={offset}: {e} — usando {len(all_preds)} predicoes ja obtidas")
             break
     return all_preds
 
