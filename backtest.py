@@ -189,13 +189,16 @@ def fetch_todays_predictions():
     while True:
         try:
             data = get("/predictions/", {"limit": _PAGE_SIZE, "offset": offset})
+            if not isinstance(data, dict):
+                _log("WARN", f"fetch_todays_predictions: resposta inesperada (offset={offset}): {type(data).__name__}")
+                break
             results = data.get("results", [])
             if not results:
                 break
             for r in results:
-                ed = r.get("event", {}).get("event_date", "")[:10]
+                ed = (r.get("event") or {}).get("event_date", "")[:10]
                 if ed == today:
-                    eid = r.get("event", {}).get("id")
+                    eid = (r.get("event") or {}).get("id")
                     if eid:
                         r["_pinnacle_odds"] = fetch_pinnacle_odds(eid)
                         time.sleep(0.2)
@@ -256,14 +259,14 @@ def _calc_goals_prediction(btts_frac, o25_frac, xgt):
     }
 
 def make_record(pred, result):
-    event   = pred.get("event", {})
-    markets = pred.get("markets", {})
-    mr      = markets.get("match_result", {})
-    ou      = markets.get("over_under", {})
-    bt      = markets.get("btts", {})
-    xg      = markets.get("expected_goals", {})
-    model   = pred.get("model", {})
-    pin     = pred.get("_pinnacle_odds", {})
+    event   = pred.get("event") or {}
+    markets = pred.get("markets") or {}
+    mr      = markets.get("match_result") or {}
+    ou      = markets.get("over_under") or {}
+    bt      = markets.get("btts") or {}
+    xg      = markets.get("expected_goals") or {}
+    model   = pred.get("model") or {}
+    pin     = pred.get("_pinnacle_odds") or {}
 
     hs    = int(result["home_score"])
     as_   = int(result["away_score"])
@@ -369,12 +372,12 @@ def build_daily_treble(preds):
     candidates = []
 
     for p in preds:
-        event  = p.get("event", {})
-        mkts   = p.get("markets", {})
-        bt     = mkts.get("btts", {})
-        mr     = mkts.get("match_result", {})
-        model  = p.get("model", {})
-        pin    = p.get("_pinnacle_odds", {})
+        event  = p.get("event") or {}
+        mkts   = p.get("markets") or {}
+        bt     = mkts.get("btts") or {}
+        mr     = mkts.get("match_result") or {}
+        model  = p.get("model") or {}
+        pin    = p.get("_pinnacle_odds") or {}
 
         pb       = float(bt.get("prob_yes") or 0)
         ph       = float(mr.get("prob_home") or 0)
@@ -472,13 +475,13 @@ def score_treble(treble, records_for_date):
     for pick in treble["picks"]:
         rec = by_event.get(pick.get("event_id"))
         if not rec:  # fallback por nome (retrocompatibilidade com picks antigos)
-            key = (pick["league"], pick["home"], pick["away"])
+            key = (pick.get("league", ""), pick.get("home", "?"), pick.get("away", "?"))
             rec = by_match.get(key)
             if rec:
-                _log("WARN", f"score_treble: event_id não encontrado, fallback por nome ({pick['home']} vs {pick['away']})")
+                _log("WARN", f"score_treble: event_id não encontrado, fallback por nome ({pick.get('home','?')} vs {pick.get('away','?')})")
         if not rec:
             return None  # resultado ainda não disponível
-        market = pick["market"]
+        market = pick.get("market", "")
         if market == "BTTS":
             hit = rec.get("hs", 0) > 0 and rec.get("as", 0) > 0
         elif market == "1X2-H":
@@ -488,9 +491,12 @@ def score_treble(treble, records_for_date):
         elif market == "1X2-A":
             hit = rec.get("real") == "A"
         else:
+            _log("WARN", f"score_treble: mercado desconhecido '{market}' — registado como derrota")
             hit = False
         results.append(hit)
 
+    if not results:
+        return None
     won   = all(results)
     odds  = treble.get("combined_odds")
     if won and odds:
@@ -574,7 +580,7 @@ def calc_stats(records, pick_key, hit_key, label):
     weekly = defaultdict(lambda: {"p":0,"h":0})
     for r in subset:
         try:
-            dt = parse_dt(r["date"] + "T00:00:00Z")
+            dt = parse_dt((r.get("date") or "") + "T00:00:00Z")
             if dt:
                 wk = dt.strftime("%Y-W%V")
                 weekly[wk]["p"] += 1
@@ -671,17 +677,17 @@ def _calibration_svg(calib_data):
     return "".join(out)
 
 def calc_xg_analysis(records):
-    valid = [r for r in records if r.get("xg", 0) > 0 and r.get("goals") is not None]
+    valid = [r for r in records if r.get("xg", 0) > 0 and r.get("goals") is not None and r.get("league") and r.get("date")]
     if not valid:
         return None
 
     by_league = defaultdict(lambda: {"xg": [], "g": []})
     by_date   = defaultdict(lambda: {"xg": [], "g": []})
     for r in valid:
-        by_league[r["league"]]["xg"].append(r["xg"])
-        by_league[r["league"]]["g"].append(r["goals"])
-        by_date[r["date"]]["xg"].append(r["xg"])
-        by_date[r["date"]]["g"].append(r["goals"])
+        by_league[r.get("league", "?")]["xg"].append(r["xg"])
+        by_league[r.get("league", "?")]["g"].append(r["goals"])
+        by_date[r.get("date", "")]["xg"].append(r["xg"])
+        by_date[r.get("date", "")]["g"].append(r["goals"])
 
     league_stats = []
     for lg, d in by_league.items():
@@ -718,7 +724,7 @@ def calc_xg_analysis(records):
     avg_err = round(sum(errors) / n, 2)
 
     return {
-        "scatter": [{"xg": r["xg"], "goals": r["goals"], "league": r["league"], "date": r["date"]} for r in valid],
+        "scatter": [{"xg": r["xg"], "goals": r["goals"], "league": r.get("league", "?"), "date": r.get("date", "")} for r in valid],
         "league_stats": league_stats,
         "date_trend":   date_trend,
         "buckets":      buckets,
@@ -1518,7 +1524,7 @@ def _run_save_mode(today, trebles):
 
 def _run_score_mode(history, today):
     """Processa resultados de todas as datas pendentes. Devolve (history, n_new_records)."""
-    processed = history.get("dates_processed", [])
+    processed = history.get("dates_processed") or []
     all_pred_files = [
         f for f in os.listdir("docs")
         if f.startswith("preds_") and f.endswith(".json")
@@ -1579,7 +1585,7 @@ def main():
     trebles = load_trebles()
 
     # Migrar todos os registos existentes para os novos thresholds de pick
-    history["records"] = migrate_picks(history.get("records", []))
+    history["records"] = migrate_picks(history.get("records") or [])
 
     trebles = _run_save_mode(today, trebles)
 

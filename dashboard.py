@@ -108,6 +108,9 @@ def fetch_all_predictions():
     while True:
         try:
             data = get("/predictions/", {"limit": limit, "offset": offset})
+            if not isinstance(data, dict):
+                _log("WARN", f"fetch_all_predictions: resposta inesperada (offset={offset}): {type(data).__name__}")
+                break
             results = data.get("results", [])
             if not results:
                 break
@@ -127,7 +130,8 @@ def fetch_all_predictions():
 def fetch_odds(event_id):
     try:
         return get(f"/events/{event_id}/odds/comparison/")
-    except Exception:
+    except Exception as e:
+        _log("WARN", f"fetch_odds({event_id}): {e}")
         return None
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1102,12 +1106,12 @@ def main():
             }
 
             # Normalizar pred para o formato esperado pelo match_card_html
-            markets = pred.get("markets", {})
-            mr  = markets.get("match_result", {})
-            xg  = markets.get("expected_goals", {})
-            ou  = markets.get("over_under", {})
-            bt  = markets.get("btts", {})
-            sc  = markets.get("score", {})
+            markets = pred.get("markets") or {}
+            mr  = markets.get("match_result") or {}
+            xg  = markets.get("expected_goals") or {}
+            ou  = markets.get("over_under") or {}
+            bt  = markets.get("btts") or {}
+            sc  = markets.get("score") or {}
 
             pred_norm = {
                 "home_win":  mr.get("prob_home", 0) / 100 if mr.get("prob_home") else None,
@@ -1125,7 +1129,7 @@ def main():
             away = m.get("away_team", "?")
             league = m.get("_league_name", "")
             _log("INFO", f"{home} vs {away} [{league}]")
-            conf = pred.get("model", {}).get("confidence")
+            conf = (pred.get("model") or {}).get("confidence")
 
             # Resultado final se o jogo já terminou
             result = None
