@@ -263,6 +263,52 @@ There is no test suite. Changes must be validated by:
 
 ---
 
+## HTML Regeneration Rule (OBRIGATÓRIO)
+
+**Sempre que uma implementação alterar `dashboard.py` ou `backtest.py`, o HTML correspondente deve ser regenerado antes do commit.** Não é necessário pedir — esta regra aplica-se automaticamente.
+
+### Como regenerar
+
+As HTML files depend on `docs/history.json` for real data. Generate with mocked API calls so no real BSD_API_KEY is needed:
+
+```bash
+# Regenera backtest.html usando dados reais de docs/history.json
+python - <<'EOF'
+import sys, json, os, unittest.mock as mock
+
+# Mockar chamadas de rede — backtest.py não precisa de API para gerar HTML
+with mock.patch("requests.Session.get") as m:
+    m.return_value.status_code = 200
+    m.return_value.json.return_value = {"results": [], "next": None}
+    import backtest
+    backtest.main()
+EOF
+
+# Regenera dashboard.html (sem Telegram nem API real)
+python - <<'EOF'
+import sys, json, os, unittest.mock as mock
+
+with mock.patch("requests.Session.get") as m:
+    m.return_value.status_code = 200
+    m.return_value.json.return_value = {"results": [], "next": None}
+    import dashboard
+    dashboard.main()
+EOF
+```
+
+Se os scripts não puderem correr localmente (falta de `docs/history.json` válido, erro de import, etc.), documentar no commit message o motivo e regenerar na próxima execução de CI.
+
+### Escopo da regra
+
+| Mudança | Regenerar |
+|---------|-----------|
+| Alteração em `build_html()` ou `build_backtest_html()` | Sim — sempre |
+| Alteração em lógica de dados que afecta o output HTML | Sim — sempre |
+| Alteração só em funções de fetch/API sem impacto no HTML | Não necessário |
+| Alteração só em `send_telegram()` | Não necessário |
+
+---
+
 ## Output / GitHub Pages
 
 The `docs/` directory is committed on every CI run and can be served via GitHub Pages (set source to `docs/` folder on `main` branch). The main page is `docs/dashboard.html`.
