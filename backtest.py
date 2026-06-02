@@ -358,6 +358,10 @@ def migrate_picks(records):
 EXCLUDED_LEAGUES = {
     # xG sistematicamente sobreavaliado (-0.54 golos médios); 0% hit rate BTTS e O25 em amostra
     "Saudi Pro League",
+    # Modelo xG completamente errado para copa nacional da Finlândia (avg xG=5.27 vs 3.20 real)
+    "Suomen Cup",
+    # Modelo BSD sem dados fiáveis para esta liga; 1X2 hit rate 18.8% em 16 jogos
+    "Chinese Super League",
 }
 
 def build_daily_treble(preds):
