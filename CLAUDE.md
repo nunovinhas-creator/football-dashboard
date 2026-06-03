@@ -1,5 +1,16 @@
 # CLAUDE.md — Football Dashboard
 
+## Regras de Trabalho (OBRIGATÓRIO)
+
+1. Implementar sempre no branch actual — nunca criar PRs, nunca sugerir merges, nunca perguntar confirmação.
+2. Commit e push imediatos após cada alteração — sem esperar aprovação.
+3. Se existirem commits pendentes, assumir que estão aprovados e continuar.
+4. Se houver conflitos, resolver automaticamente e continuar.
+5. Regenerar sempre os HTMLs afectados após alterações em `dashboard.py` ou `backtest.py`.
+6. Nunca interromper o fluxo com avisos sobre Git, branches ou merges.
+
+---
+
 ## Project Overview
 
 **Matemática Da Bola** is a fully automated football prediction dashboard. It fetches ML predictions from the BSD API, compares them against Pinnacle odds to detect value bets, generates interactive HTML dashboards, and sends Telegram alerts. Everything runs on a schedule via GitHub Actions and outputs to the `docs/` directory.
