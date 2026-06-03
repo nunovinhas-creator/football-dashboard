@@ -863,7 +863,7 @@ def build_html(enriched_list, todays_treble=None):
     high_conf   = conf_counts["ALTA"]
     med_conf    = conf_counts["MÉDIA"]
     low_conf    = conf_counts["BAIXA"]
-    total       = len(with_data)
+    total       = sum(1 for e in with_data if e["match"].get("event_date","")[:10] == today)
 
     league_opts = "".join(f'<option value="{_he(l)}">{league_flag(l)} {_he(l)}</option>' for l in leagues)
     date_opts   = "".join(f'<option value="{_he(d)}">{_he(d)}</option>' for d in dates)
@@ -1094,7 +1094,7 @@ def main():
     failed_count  = 0
     seen = set()
     for pred in all_preds:
-        event = pred.get("event", {})
+        event = pred.get("event") or {}
         eid = event.get("id")
         if eid in seen:
             continue
