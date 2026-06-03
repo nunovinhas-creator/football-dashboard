@@ -303,12 +303,22 @@ def predict_goals(home_xg, away_xg, btts_prob, o25_prob):
     }
 
 def confidence_badge(conf):
+    _LABELS = {
+        "ALTA":  ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)"),
+        "MÉDIA": ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)"),
+        "BAIXA": ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)"),
+    }
     if conf is None:
-        return ("MÉDIA", "oklch(70% 0.12 188)", "oklch(7% 0.01 188)")
-    c = float(conf)
-    if c >= _CONF_ALTA:   return ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)")
-    elif c >= _CONF_MEDIA: return ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
-    else:                  return ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)")
+        return _LABELS["MÉDIA"]
+    if isinstance(conf, str) and conf.upper() in _LABELS:
+        return _LABELS[conf.upper()]
+    try:
+        c = float(conf)
+    except (TypeError, ValueError):
+        return _LABELS["MÉDIA"]
+    if c >= _CONF_ALTA:    return _LABELS["ALTA"]
+    elif c >= _CONF_MEDIA: return _LABELS["MÉDIA"]
+    else:                  return _LABELS["BAIXA"]
 
 def tip_label(hw, dr, aw, o25, conf):
     best = max(hw, dr, aw)
@@ -858,8 +868,11 @@ def build_html(enriched_list, todays_treble=None):
         for e in with_data if e["match"].get("event_date")
     ))
 
-    # Contadores do header: apenas jogos de hoje
-    today_data  = [e for e in with_data if e["match"].get("event_date","")[:10] == today]
+    # Data padrão: hoje se houver jogos, senão a primeira data disponível
+    default_date = today if today in dates else (dates[0] if dates else today)
+
+    # Contadores do header: jogos da data padrão
+    today_data  = [e for e in with_data if e["match"].get("event_date","")[:10] == default_date]
     conf_counts = Counter(confidence_badge(e.get("confidence"))[0] for e in today_data)
     high_conf   = conf_counts["ALTA"]
     med_conf    = conf_counts["MÉDIA"]
@@ -868,7 +881,7 @@ def build_html(enriched_list, todays_treble=None):
 
     league_opts = "".join(f'<option value="{_he(l)}">{league_flag(l)} {_he(l)}</option>' for l in leagues)
     date_opts   = "".join(
-        f'<option value="{_he(d)}" {"selected" if d == today else ""}>{_he(d)}</option>'
+        f'<option value="{_he(d)}" {"selected" if d == default_date else ""}>{_he(d)}</option>'
         for d in dates
     )
 
@@ -957,10 +970,15 @@ def send_telegram(enriched_list, todays_treble=None):
     today  = today_str()
     blocks = []
 
-    # Filtrar só jogos de hoje — a API devolve previsões de vários dias
+    # Filtrar para a data padrão: hoje se houver jogos, senão a primeira disponível
+    dates_with_games = sorted(set(
+        e["match"].get("event_date", "")[:10]
+        for e in enriched_list if e["match"].get("event_date")
+    ))
+    tg_date = today if today in dates_with_games else (dates_with_games[0] if dates_with_games else today)
     enriched_list = [
         e for e in enriched_list
-        if e["match"].get("event_date", "")[:10] == today
+        if e["match"].get("event_date", "")[:10] == tg_date
     ]
 
     # ── 1. Tripla do dia ──────────────────────────────────────────────────────
