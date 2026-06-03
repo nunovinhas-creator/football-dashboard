@@ -102,7 +102,8 @@ def parse_dt(s, context=""):
     return None
 
 def fetch_all_predictions():
-    today = today_str()
+    """Busca todas as predicoes disponíveis na API (todos os dias).
+    Odds são enriquecidas apenas para hoje em main() — aqui só se pagina."""
     all_preds = []
     offset = 0
     limit = _PAGE_SIZE
@@ -115,12 +116,8 @@ def fetch_all_predictions():
             results = data.get("results", [])
             if not results:
                 break
-            today_results = [
-                r for r in results
-                if (r.get("event") or {}).get("event_date", "")[:10] == today
-            ]
-            all_preds.extend(today_results)
-            _log("INFO", f"offset={offset} -> {len(results)} predicoes ({len(today_results)} de hoje)")
+            all_preds.extend(results)
+            _log("INFO", f"offset={offset} -> {len(results)} predicoes")
             if not data.get("next"):
                 break
             offset += limit
@@ -672,6 +669,8 @@ function resetFilters() {
     .forEach(c => { c.classList.remove("hidden"); container.appendChild(c); });
   document.getElementById("no-results").classList.add("hidden");
 }
+
+document.addEventListener("DOMContentLoaded", applyFilters);
 """
 
 def match_card_html(enriched):
@@ -859,14 +858,19 @@ def build_html(enriched_list, todays_treble=None):
         for e in with_data if e["match"].get("event_date")
     ))
 
-    conf_counts = Counter(confidence_badge(e.get("confidence"))[0] for e in with_data)
+    # Contadores do header: apenas jogos de hoje
+    today_data  = [e for e in with_data if e["match"].get("event_date","")[:10] == today]
+    conf_counts = Counter(confidence_badge(e.get("confidence"))[0] for e in today_data)
     high_conf   = conf_counts["ALTA"]
     med_conf    = conf_counts["MÉDIA"]
     low_conf    = conf_counts["BAIXA"]
-    total       = sum(1 for e in with_data if e["match"].get("event_date","")[:10] == today)
+    total       = len(today_data)
 
     league_opts = "".join(f'<option value="{_he(l)}">{league_flag(l)} {_he(l)}</option>' for l in leagues)
-    date_opts   = "".join(f'<option value="{_he(d)}">{_he(d)}</option>' for d in dates)
+    date_opts   = "".join(
+        f'<option value="{_he(d)}" {"selected" if d == today else ""}>{_he(d)}</option>'
+        for d in dates
+    )
 
     cards = "\n".join(match_card_html(e) for e in with_data)
 
@@ -1129,7 +1133,9 @@ def main():
                 "most_likely_score": sc.get("most_likely"),
             }
 
-            odds = fetch_odds(eid)
+            # Odds Pinnacle apenas para jogos de hoje (value detection relevante só hoje)
+            event_date = event.get("event_date", "")[:10]
+            odds = fetch_odds(eid) if event_date == today else None
             home = m.get("home_team", "?")
             away = m.get("away_team", "?")
             league = m.get("_league_name", "")

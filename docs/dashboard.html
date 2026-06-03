@@ -271,7 +271,7 @@ body{background:var(--bg);color:var(--text);font-family:"Albert Sans","Segoe UI"
 <div class="header">
   <div class="header-left">
     <h1>⚽ Matemática Da Bola</h1>
-    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-06-03 20:46 UTC</div>
+    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-06-03 20:51 UTC</div>
   </div>
 </div>
 <div class="tabs">
@@ -403,6 +403,8 @@ function resetFilters() {
     .forEach(c => { c.classList.remove("hidden"); container.appendChild(c); });
   document.getElementById("no-results").classList.add("hidden");
 }
+
+document.addEventListener("DOMContentLoaded", applyFilters);
 </script>
 </body>
 </html>
