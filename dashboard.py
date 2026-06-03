@@ -102,6 +102,7 @@ def parse_dt(s, context=""):
     return None
 
 def fetch_all_predictions():
+    today = today_str()
     all_preds = []
     offset = 0
     limit = _PAGE_SIZE
@@ -114,8 +115,12 @@ def fetch_all_predictions():
             results = data.get("results", [])
             if not results:
                 break
-            all_preds.extend(results)
-            _log("INFO", f"offset={offset} -> {len(results)} predicoes")
+            today_results = [
+                r for r in results
+                if (r.get("event") or {}).get("event_date", "")[:10] == today
+            ]
+            all_preds.extend(today_results)
+            _log("INFO", f"offset={offset} -> {len(results)} predicoes ({len(today_results)} de hoje)")
             if not data.get("next"):
                 break
             offset += limit
