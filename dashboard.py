@@ -1,5 +1,5 @@
 """
-Matemática Da Bola — BSD API v2 (fixed)
+Matemática Da Bola — dashboard BSD API v2
 """
 
 import os
@@ -7,8 +7,37 @@ import json
 import math
 import time
 import requests
+from html import escape as _he
 from collections import Counter
 from datetime import datetime, timezone, timedelta
+
+# Probabilidades (escala 0-1)
+_CONF_ALTA  = 0.65
+_CONF_MEDIA = 0.45
+_GA_ID      = "G-WE48R4KL96"
+_PAGE_SIZE  = 50
+
+# Labels de mercado para triplas (usados em treble_banner_html e send_telegram)
+_MKT_LABEL = {
+    "BTTS":  "🔁 BTTS",
+    "1X2-H": "🏠 Casa",
+    "1X2-D": "🤝 Empate",
+    "1X2-A": "✈️ Fora",
+}
+
+# Cores de confiança OKLCH (web)
+_CONF_COLOR = {
+    "ALTA":  "oklch(84% 0.19 80.46)",
+    "MÉDIA": "oklch(70% 0.12 188)",
+    "BAIXA": "oklch(72% 0.15 35)",
+}
+
+# Estilos CSS completos dos badges de confiança (usados em match_card_html)
+_BADGE_STYLE = {
+    "ALTA":  "background:oklch(10% 0.015 80);color:oklch(84% 0.19 80.46);border:1px solid oklch(61% 0.085 78 / 0.45)",
+    "MÉDIA": "background:oklch(7% 0.01 188);color:oklch(70% 0.12 188);border:1px solid oklch(49% 0.08 188 / 0.5)",
+    "BAIXA": "background:oklch(7% 0.01 35);color:oklch(72% 0.15 35);border:1px solid oklch(48% 0.1 35 / 0.5)",
+}
 
 BSD_KEY  = os.environ["BSD_API_KEY"]
 TG_TOKEN = os.environ["TG_TOKEN"]
@@ -29,23 +58,28 @@ def _log(level, msg):
 # CAMADA DE DADOS — BSD API
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get(path, params=None, _retry=0):
-    try:
-        r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
-        if (r.status_code == 429 or r.status_code >= 500) and _retry < len(_RETRY_DELAYS):
-            wait = _RETRY_DELAYS[_retry]
-            _log("WARN", f"HTTP {r.status_code} — aguardar {wait}s (tentativa {_retry+1}/{len(_RETRY_DELAYS)})")
+def get(path, params=None):
+    # Síncrono com backtest.py — qualquer alteração deve ser replicada
+    last_exc = None
+    for attempt in range(len(_RETRY_DELAYS) + 1):
+        if attempt:
+            wait = _RETRY_DELAYS[attempt - 1]
+            _log("WARN", f"aguardar {wait}s (tentativa {attempt}/{len(_RETRY_DELAYS)})")
             time.sleep(wait)
-            return get(path, params, _retry + 1)
-        r.raise_for_status()
-        return r.json()
-    except requests.exceptions.RequestException as e:
-        if _retry < len(_RETRY_DELAYS):
-            wait = _RETRY_DELAYS[_retry]
-            _log("WARN", f"request falhou ({e}) — aguardar {wait}s")
-            time.sleep(wait)
-            return get(path, params, _retry + 1)
-        raise
+        try:
+            r = requests.get(f"{BASE}{path}", headers=HEADERS, params=params, timeout=15)
+            if r.status_code == 429 or r.status_code >= 500:
+                _log("WARN", f"HTTP {r.status_code} — tentativa {attempt+1}/{len(_RETRY_DELAYS)+1}")
+                last_exc = requests.exceptions.ConnectionError(f"HTTP {r.status_code}")
+                continue
+            r.raise_for_status()
+            try:
+                return r.json()
+            except ValueError as e:
+                raise requests.exceptions.RequestException(f"JSON inválido: {e}") from e
+        except requests.exceptions.RequestException as e:
+            last_exc = e
+    raise last_exc or requests.exceptions.RequestException("todas as tentativas falharam")
 
 def today_str():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -68,17 +102,25 @@ def parse_dt(s, context=""):
     return None
 
 def fetch_all_predictions():
+    today = today_str()
     all_preds = []
     offset = 0
-    limit = 50
+    limit = _PAGE_SIZE
     while True:
         try:
             data = get("/predictions/", {"limit": limit, "offset": offset})
+            if not isinstance(data, dict):
+                _log("WARN", f"fetch_all_predictions: resposta inesperada (offset={offset}): {type(data).__name__}")
+                break
             results = data.get("results", [])
             if not results:
                 break
-            all_preds.extend(results)
-            _log("INFO", f"offset={offset} -> {len(results)} predicoes")
+            today_results = [
+                r for r in results
+                if (r.get("event") or {}).get("event_date", "")[:10] == today
+            ]
+            all_preds.extend(today_results)
+            _log("INFO", f"offset={offset} -> {len(results)} predicoes ({len(today_results)} de hoje)")
             if not data.get("next"):
                 break
             offset += limit
@@ -93,7 +135,8 @@ def fetch_all_predictions():
 def fetch_odds(event_id):
     try:
         return get(f"/events/{event_id}/odds/comparison/")
-    except Exception:
+    except Exception as e:
+        _log("WARN", f"fetch_odds({event_id}): {e}")
         return None
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -266,9 +309,9 @@ def confidence_badge(conf):
     if conf is None:
         return ("MÉDIA", "oklch(70% 0.12 188)", "oklch(7% 0.01 188)")
     c = float(conf)
-    if c >= 0.65:   return ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)")
-    elif c >= 0.45: return ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
-    else:           return ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)")
+    if c >= _CONF_ALTA:   return ("ALTA",  "oklch(84% 0.19 80.46)", "oklch(10% 0.015 80)")
+    elif c >= _CONF_MEDIA: return ("MÉDIA", "oklch(70% 0.12 188)",   "oklch(7% 0.01 188)")
+    else:                  return ("BAIXA", "oklch(72% 0.15 35)",    "oklch(7% 0.01 35)")
 
 def tip_label(hw, dr, aw, o25, conf):
     best = max(hw, dr, aw)
@@ -637,10 +680,10 @@ def match_card_html(enriched):
     conf   = enriched.get("confidence")
     result = enriched.get("result")
 
-    home   = m.get("home_team", "?")
-    away   = m.get("away_team", "?")
-    league = m.get("_league_name", "")
-    flag   = league_flag(league)
+    home   = _he(m.get("home_team", "?") or "?")
+    away   = _he(m.get("away_team", "?") or "?")
+    league = _he(m.get("_league_name", "") or "")
+    flag   = league_flag(m.get("_league_name", ""))
     ko_raw = m.get("event_date", "")
 
     ko_dt = parse_dt(ko_raw)
@@ -667,7 +710,6 @@ def match_card_html(enriched):
     best = max(hw, dr, aw)
 
     status = m.get("status", "notstarted")
-    # FIX BUG 3: is_finished agora correcto
     is_finished = (status == "finished")
     is_live     = status in ("inprogress", "live", "halftime")
     card_class  = "card finished" if is_finished else ("card live-now" if is_live else "card")
@@ -686,12 +728,7 @@ def match_card_html(enriched):
           <div class="score-label">Previsão</div>
         </div>'''
 
-    if conf_label == "ALTA":
-        badge_style = "background:oklch(10% 0.015 80);color:oklch(84% 0.19 80.46);border:1px solid oklch(61% 0.085 78 / 0.45)"
-    elif conf_label == "MÉDIA":
-        badge_style = "background:oklch(7% 0.01 188);color:oklch(70% 0.12 188);border:1px solid oklch(49% 0.08 188 / 0.5)"
-    else:
-        badge_style = "background:oklch(7% 0.01 35);color:oklch(72% 0.15 35);border:1px solid oklch(48% 0.1 35 / 0.5)"
+    badge_style = _BADGE_STYLE.get(conf_label, _BADGE_STYLE["BAIXA"])
 
     def bar(p, highlight):
         color = "oklch(84% 0.19 80.46)" if highlight else "oklch(78% 0 0 / 0.16)"
@@ -778,17 +815,15 @@ def load_todays_treble():
 def treble_banner_html(treble):
     if not treble:
         return ""
-    mkt_label = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
-    conf_col  = {"ALTA": "oklch(84% 0.19 80.46)", "MÉDIA": "oklch(70% 0.12 188)", "BAIXA": "oklch(72% 0.15 35)"}
-    picks_html = ""
+    pick_parts = []
     for i, pk in enumerate(treble.get("picks", []), 1):
         mkt_key = pk.get("market", "")
-        col  = conf_col.get(pk.get("conf", ""), "oklch(62% 0 0)")
-        mkt  = mkt_label.get(mkt_key, mkt_key or "?")
+        col  = _CONF_COLOR.get(pk.get("conf", ""), "oklch(62% 0 0)")
+        mkt  = _MKT_LABEL.get(mkt_key, mkt_key or "?")
         odds = f"@{pk['odds']:.2f}" if pk.get("odds") else ""
         conf_bg = {"ALTA": "oklch(10% 0.015 80)", "MÉDIA": "oklch(7% 0.01 188)", "BAIXA": "oklch(7% 0.01 35)"}.get(pk.get("conf",""), "oklch(8% 0.006 95)")
         conf_bd = {"ALTA": "oklch(61% 0.085 78 / 0.45)", "MÉDIA": "oklch(49% 0.08 188 / 0.5)", "BAIXA": "oklch(48% 0.1 35 / 0.5)"}.get(pk.get("conf",""), "oklch(52% 0 0 / 0.3)")
-        picks_html += (
+        pick_parts.append(
             f'<div class="tb-pick">'
             f'<span class="tb-pick-num">{i}</span>'
             f'<span class="tb-pick-league">{pk.get("league", "")}</span>'
@@ -799,6 +834,7 @@ def treble_banner_html(treble):
             f'<span class="tb-pick-odds">{odds}</span>'
             f'</div>'
         )
+    picks_html = "".join(pick_parts)
     combined = f"{treble['combined_odds']:.2f}" if treble.get("combined_odds") else "–"
     return (
         f'<div class="treble-banner">'
@@ -827,10 +863,10 @@ def build_html(enriched_list, todays_treble=None):
     high_conf   = conf_counts["ALTA"]
     med_conf    = conf_counts["MÉDIA"]
     low_conf    = conf_counts["BAIXA"]
-    total       = len(with_data)
+    total       = sum(1 for e in with_data if e["match"].get("event_date","")[:10] == today)
 
-    league_opts = "".join(f'<option value="{l}">{league_flag(l)} {l}</option>' for l in leagues)
-    date_opts   = "".join(f'<option value="{d}">{d}</option>' for d in dates)
+    league_opts = "".join(f'<option value="{_he(l)}">{league_flag(l)} {_he(l)}</option>' for l in leagues)
+    date_opts   = "".join(f'<option value="{_he(d)}">{_he(d)}</option>' for d in dates)
 
     cards = "\n".join(match_card_html(e) for e in with_data)
 
@@ -840,8 +876,8 @@ def build_html(enriched_list, todays_treble=None):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matemática Da Bola — {today}</title>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-WE48R4KL96"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());gtag("config","G-WE48R4KL96");</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id={_GA_ID}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}gtag("js",new Date());gtag("config","{_GA_ID}");</script>
 <style>{_dashboard_css()}</style>
 </head>
 <body>
@@ -925,17 +961,17 @@ def send_telegram(enriched_list, todays_treble=None):
 
     # ── 1. Tripla do dia ──────────────────────────────────────────────────────
     treble  = todays_treble
-    mkt_map = {"BTTS": "🔁 BTTS", "1X2-H": "🏠 Casa", "1X2-D": "🤝 Empate", "1X2-A": "✈️ Fora"}
     if treble:
         picks_lines = []
-        for i, pk in enumerate(treble["picks"], 1):
-            conf = pk.get("conf", "")
-            mkt  = mkt_map.get(pk["market"], pk["market"])
-            odds = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
-            flag = league_flag(pk["league"])
+        for i, pk in enumerate(treble.get("picks", []), 1):
+            conf    = pk.get("conf", "")
+            mkt_key = pk.get("market", "")
+            mkt     = _MKT_LABEL.get(mkt_key, mkt_key or "?")
+            odds    = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
+            flag    = league_flag(pk.get("league", ""))
             picks_lines.append(
-                f"`{i}` {flag} *{escape_md(pk['home'])} vs {escape_md(pk['away'])}*\n"
-                f"   {mkt} · {int(pk['prob']*100)}% · _{conf}_{odds}"
+                f"`{i}` {flag} *{escape_md(pk.get('home', '?'))} vs {escape_md(pk.get('away', '?'))}*\n"
+                f"   {mkt} · {int((pk.get('prob') or 0)*100)}% · _{conf}_{odds}"
             )
         combined = f"\n💰 Odds combinadas: *{treble['combined_odds']:.2f}*" if treble.get("combined_odds") else ""
         blocks.append("🎯 *TRIPLA DO DIA*\n" + "\n\n".join(picks_lines) + combined)
@@ -1024,16 +1060,17 @@ def send_telegram(enriched_list, todays_treble=None):
     # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
 
-    def _tg_send(text, _retry=0):
-        try:
-            r = requests.post(url, json={"chat_id": TG_CHAT, "text": text, "parse_mode": "Markdown"}, timeout=10)
-            r.raise_for_status()
-        except Exception as e:
-            if _retry < 2:
-                time.sleep(5)
-                _tg_send(text, _retry + 1)
-            else:
-                _log("WARN", f"telegram falhou após {_retry+1} tentativas: {e}")
+    def _tg_send(text):
+        for attempt in range(3):
+            try:
+                r = requests.post(url, json={"chat_id": TG_CHAT, "text": text, "parse_mode": "Markdown"}, timeout=10)
+                r.raise_for_status()
+                return
+            except Exception as e:
+                if attempt < 2:
+                    time.sleep(5)
+                else:
+                    _log("WARN", f"telegram falhou após {attempt+1} tentativas: {e}")
 
     header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
     _tg_send(header)
@@ -1057,7 +1094,7 @@ def main():
     failed_count  = 0
     seen = set()
     for pred in all_preds:
-        event = pred.get("event", {})
+        event = pred.get("event") or {}
         eid = event.get("id")
         if eid in seen:
             continue
@@ -1074,12 +1111,12 @@ def main():
             }
 
             # Normalizar pred para o formato esperado pelo match_card_html
-            markets = pred.get("markets", {})
-            mr  = markets.get("match_result", {})
-            xg  = markets.get("expected_goals", {})
-            ou  = markets.get("over_under", {})
-            bt  = markets.get("btts", {})
-            sc  = markets.get("score", {})
+            markets = pred.get("markets") or {}
+            mr  = markets.get("match_result") or {}
+            xg  = markets.get("expected_goals") or {}
+            ou  = markets.get("over_under") or {}
+            bt  = markets.get("btts") or {}
+            sc  = markets.get("score") or {}
 
             pred_norm = {
                 "home_win":  mr.get("prob_home", 0) / 100 if mr.get("prob_home") else None,
@@ -1097,7 +1134,7 @@ def main():
             away = m.get("away_team", "?")
             league = m.get("_league_name", "")
             _log("INFO", f"{home} vs {away} [{league}]")
-            conf = pred.get("model", {}).get("confidence")
+            conf = (pred.get("model") or {}).get("confidence")
 
             # Resultado final se o jogo já terminou
             result = None
