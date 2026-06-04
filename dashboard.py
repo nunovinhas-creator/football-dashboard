@@ -905,9 +905,8 @@ def build_html(enriched_list, todays_treble=None):
 
     # ── Performance stats do histórico ──────────────────────────────────────
     try:
-        import json as _json
         with open("docs/history.json", "r", encoding="utf-8") as _f:
-            _hist = _json.load(_f)
+            _hist = json.load(_f)
         _recs = _hist.get("records", [])
         _p1   = [r for r in _recs if r.get("pick_1x2")]
         _h1   = [r for r in _p1  if r.get("hit_1x2")]
@@ -920,7 +919,7 @@ def build_html(enriched_list, todays_treble=None):
         po25  = len(_ho) / max(len(_po), 1) * 100
         n_recs = len(_recs)
         with open("docs/trebles.json", "r", encoding="utf-8") as _f:
-            _trb = _json.load(_f)
+            _trb = json.load(_f)
         _th  = _trb.get("history", [])
         _tw  = [t for t in _th if t.get("hit")]
         perf_trb = f"{len(_tw)}/{len(_th)}" if _th else "–"

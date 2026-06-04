@@ -22,12 +22,22 @@ concurrency:
 permissions:
   contents: write
 
+# Forçar Node.js 24 para actions/checkout e actions/setup-python
+# (Node.js 20 deprecated a partir de June 16, 2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   dashboard:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Fazer checkout do HEAD actual do main, não do SHA do trigger
+          # Evita que runs queued partam de um SHA antigo
+          ref: main
+          fetch-depth: 1
 
       - name: Python 3.12
         uses: actions/setup-python@v5
@@ -56,7 +66,38 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/dashboard.html docs/backtest.html docs/history.json docs/trebles.json docs/preds_*.json README.md 2>/dev/null || true
+
+          # 1. Buscar estado actual do remote (pode ter avançado durante os 5-6 min do run)
+          git fetch origin main
+
+          # 2. Soft reset: move HEAD para origin/main sem apagar os ficheiros gerados
+          #    (working tree preservado — não há conflito de rebase possível)
+          git reset --soft origin/main
+
+          # 3. Proteger dados JSON contra regressão:
+          #    Se o remote tem uma versão maior (mais registos/dados), usá-la.
+          #    Cenário: run SAVE não modifica history.json, mas um SCORE anterior
+          #    pode ter adicionado registos que não existem no nosso working tree.
+          for f in docs/history.json docs/trebles.json; do
+            [ -f "$f" ] || continue
+            LOCAL=$(wc -c < "$f")
+            REMOTE=$(git show "origin/main:$f" 2>/dev/null | wc -c || echo 0)
+            if [ "$REMOTE" -gt "$LOCAL" ]; then
+              echo "Proteger $f: remote ($REMOTE bytes) > local ($LOCAL bytes) — usar versão remota"
+              git checkout origin/main -- "$f"
+            fi
+          done
+
+          # 4. Adicionar todos os ficheiros gerados
+          #    HTML: sempre sobrepõe (idempotente — regenerado a cada run)
+          #    JSON: versão mais completa (step 3 já garantiu isso)
+          git add docs/dashboard.html docs/backtest.html \
+                  docs/history.json docs/trebles.json \
+                  docs/preds_*.json README.md 2>/dev/null || true
+
+          # 5. Commitar apenas se houver alterações vs. origin/main
           git diff --staged --quiet || git commit -m "update: $(date -u +%Y-%m-%dT%H:%M)"
-          git pull --rebase origin main
+
+          # 6. Push directo: HEAD está garantidamente em cima de origin/main (step 2)
+          #    Sem rebase, sem conflitos possíveis
           git push
