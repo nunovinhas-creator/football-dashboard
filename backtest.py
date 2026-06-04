@@ -1581,6 +1581,56 @@ def _run_score_mode(history, today):
 
     return history, new_records_total
 
+def update_readme_stats(history, trebles):
+    """Actualiza a secção STATS_START…STATS_END no README.md com badges shields.io."""
+    import re
+    try:
+        with open("README.md", "r", encoding="utf-8") as f:
+            content = f.read()
+    except FileNotFoundError:
+        return
+
+    records    = history.get("records", [])
+    dates      = history.get("dates_processed", [])
+
+    picks_1x2  = [r for r in records if r.get("pick_1x2")]
+    hits_1x2   = [r for r in picks_1x2 if r.get("hit_1x2")]
+    picks_btts = [r for r in records if r.get("pick_btts")]
+    hits_btts  = [r for r in picks_btts if r.get("hit_btts")]
+    picks_o25  = [r for r in records if r.get("pick_o25")]
+    hits_o25   = [r for r in picks_o25 if r.get("hit_o25")]
+
+    def pct(h, p): return f"{len(h)/max(len(p),1)*100:.1f}%25"
+
+    hist_t   = trebles.get("history", [])
+    wins_t   = [t for t in hist_t if t.get("hit")]
+    treble_v = f"{len(wins_t)}%2F{len(hist_t)}"
+
+    today = datetime.now(timezone.utc).strftime("%Y--%m--%d")
+    n_rec = str(len(records))
+
+    badges = (
+        f"![Records](https://img.shields.io/badge/Registos-{n_rec}-00FF88?style=flat-square&labelColor=0d1117)"
+        f"&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-{pct(hits_1x2,picks_1x2)}-A855F7?style=flat-square&labelColor=0d1117)"
+        f"&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-{pct(hits_btts,picks_btts)}-00CCFF?style=flat-square&labelColor=0d1117)"
+        f"&nbsp;![O25](https://img.shields.io/badge/Over_2.5-{pct(hits_o25,picks_o25)}-F59E0B?style=flat-square&labelColor=0d1117)"
+        f"&nbsp;![Trebles](https://img.shields.io/badge/Triplas-{treble_v}-FF6B6B?style=flat-square&labelColor=0d1117)"
+        f"&nbsp;![Updated](https://img.shields.io/badge/Updated-{today}-555555?style=flat-square&labelColor=0d1117)"
+    )
+    new_block = f"<!-- STATS_START -->\n{badges}\n<!-- STATS_END -->"
+
+    updated = re.sub(
+        r"<!-- STATS_START -->.*?<!-- STATS_END -->",
+        new_block,
+        content,
+        flags=re.DOTALL,
+    )
+    if updated == content:
+        return
+    with open("README.md", "w", encoding="utf-8") as f:
+        f.write(updated)
+    _log("INFO", f"README.md stats: {n_rec} registos, BTTS {pct(hits_btts,picks_btts)}, Triplas {len(wins_t)}/{len(hist_t)}")
+
 def main():
     today = today_str()
     os.makedirs("docs", exist_ok=True)
@@ -1628,6 +1678,8 @@ def main():
         f.write(html)
     os.replace(_tmp, "docs/backtest.html")
     _log("INFO", "docs/backtest.html gerado ✓")
+
+    update_readme_stats(history, trebles)
 
     cleanup_old_preds()
 
