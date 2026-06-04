@@ -589,11 +589,52 @@ body{background:var(--bg);color:var(--text);font-family:"Albert Sans","Segoe UI"
   margin-top:10px
 }
 
+/* TOP ACCENT */
+.top-accent{
+  height:3px;
+  background:linear-gradient(90deg,
+    oklch(70% 0.12 188 / 0) 0%,
+    oklch(70% 0.12 188) 12%,
+    oklch(84% 0.19 80.46) 50%,
+    oklch(65% 0.2 290) 88%,
+    oklch(65% 0.2 290 / 0) 100%
+  );
+}
+
+/* PERF STRIP */
+.perf-strip{
+  display:flex;overflow-x:auto;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  scrollbar-width:none;
+}
+.perf-strip::-webkit-scrollbar{display:none}
+.perf-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 18px;
+  border-right:1px solid var(--border);
+  white-space:nowrap;flex-shrink:0;
+}
+.perf-item:first-child{padding-left:4px}
+.perf-item:last-child{border-right:none}
+.perf-mini-bar{width:30px;height:3px;background:var(--graphite2);border-radius:2px;overflow:hidden;flex-shrink:0}
+.perf-mini-fill{height:100%;border-radius:2px}
+.perf-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.perf-val{font-size:.8rem;font-weight:800;letter-spacing:-.3px}
+.pv-purple{color:oklch(73% 0.17 290)}
+.pv-teal{color:var(--teal)}
+.pv-gold{color:var(--gold)}
+.pv-orange{color:oklch(75% 0.16 52)}
+.pv-muted{color:var(--sub)}
+
 @media(max-width:580px){
   .header,.filters,.cards-wrap{padding-left:14px;padding-right:14px}
   .team{font-size:.85rem}
   .stats-strip .stat-n{font-size:1.4rem}
   .filters{gap:5px}
+  .perf-strip{padding:0 14px}
+  .perf-item{padding:8px 12px}
 }
 """
 
@@ -862,6 +903,58 @@ def build_html(enriched_list, todays_treble=None):
     with_data = [e for e in enriched_list if has_pred_data(e["pred"])]
     banner_html   = treble_banner_html(todays_treble)
 
+    # ── Performance stats do histórico ──────────────────────────────────────
+    try:
+        import json as _json
+        with open("docs/history.json", "r", encoding="utf-8") as _f:
+            _hist = _json.load(_f)
+        _recs = _hist.get("records", [])
+        _p1   = [r for r in _recs if r.get("pick_1x2")]
+        _h1   = [r for r in _p1  if r.get("hit_1x2")]
+        _pb   = [r for r in _recs if r.get("pick_btts")]
+        _hb   = [r for r in _pb  if r.get("hit_btts")]
+        _po   = [r for r in _recs if r.get("pick_o25")]
+        _ho   = [r for r in _po  if r.get("hit_o25")]
+        p1x2  = len(_h1) / max(len(_p1), 1) * 100
+        pbtts = len(_hb) / max(len(_pb), 1) * 100
+        po25  = len(_ho) / max(len(_po), 1) * 100
+        n_recs = len(_recs)
+        with open("docs/trebles.json", "r", encoding="utf-8") as _f:
+            _trb = _json.load(_f)
+        _th  = _trb.get("history", [])
+        _tw  = [t for t in _th if t.get("hit")]
+        perf_trb = f"{len(_tw)}/{len(_th)}" if _th else "–"
+    except Exception:
+        p1x2 = pbtts = po25 = 0.0
+        n_recs = 0
+        perf_trb = "–"
+
+    perf_strip_html = f'''<div class="perf-strip">
+  <div class="perf-item">
+    <div class="perf-mini-bar"><div class="perf-mini-fill" style="width:{p1x2:.0f}%;background:oklch(73% 0.17 290)"></div></div>
+    <span class="perf-lbl">1X2</span>
+    <span class="perf-val pv-purple">{p1x2:.1f}%</span>
+  </div>
+  <div class="perf-item">
+    <div class="perf-mini-bar"><div class="perf-mini-fill" style="width:{pbtts:.0f}%;background:var(--teal)"></div></div>
+    <span class="perf-lbl">BTTS</span>
+    <span class="perf-val pv-teal">{pbtts:.1f}%</span>
+  </div>
+  <div class="perf-item">
+    <div class="perf-mini-bar"><div class="perf-mini-fill" style="width:{po25:.0f}%;background:var(--gold)"></div></div>
+    <span class="perf-lbl">O2.5</span>
+    <span class="perf-val pv-gold">{po25:.1f}%</span>
+  </div>
+  <div class="perf-item">
+    <span class="perf-lbl">Triplas</span>
+    <span class="perf-val pv-orange">{perf_trb}</span>
+  </div>
+  <div class="perf-item">
+    <span class="perf-lbl">Amostra</span>
+    <span class="perf-val pv-muted">{n_recs} reg.</span>
+  </div>
+</div>'''
+
     leagues  = sorted(set(e["match"].get("_league_name","") for e in with_data))
     dates    = sorted(set(
         e["match"].get("event_date","")[:10]
@@ -898,6 +991,7 @@ def build_html(enriched_list, todays_treble=None):
 <style>{_dashboard_css()}</style>
 </head>
 <body>
+<div class="top-accent"></div>
 <div class="header">
   <div class="header-left">
     <h1>⚽ Matemática Da Bola</h1>
@@ -908,6 +1002,7 @@ def build_html(enriched_list, todays_treble=None):
   <a href="dashboard.html" class="tab active">📊 Dashboard</a>
   <a href="backtest.html"  class="tab">🔬 Backtest</a>
 </div>
+{perf_strip_html}
 <div class="stats-strip">
   <div class="stat-item"><div class="stat-n" style="color:var(--blue)">{total}</div><div class="stat-l">Jogos hoje</div></div>
   <div class="stat-item"><div class="stat-n" style="color:var(--green)">{high_conf}</div><div class="stat-l">Alta confiança</div></div>
