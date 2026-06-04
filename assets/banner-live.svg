@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 110" width="900" height="110" role="img" aria-label="Over 2.5 Scout — Live Signals">
+  <title>Live Signals</title>
+  <defs>
+    <pattern id="cf" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#0A0A0C"/>
+      <rect x="0" y="0" width="3" height="3" fill="#0F0F14"/>
+      <rect x="3" y="3" width="3" height="3" fill="#0F0F14"/>
+    </pattern>
+    <linearGradient id="gold-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9A7520"/>
+      <stop offset="45%"  stop-color="#D4AF37"/>
+      <stop offset="60%"  stop-color="#F0D060"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </linearGradient>
+    <linearGradient id="gold-line" x1="0" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#D4AF37" stop-opacity="0"/>
+      <stop offset="10%"  stop-color="#D4AF37"/>
+      <stop offset="90%"  stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="green-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#1A7A00"/>
+      <stop offset="50%"  stop-color="#39FF14"/>
+      <stop offset="100%" stop-color="#1A7A00"/>
+    </linearGradient>
+    <filter id="neon-g" x="-40%" y="-100%" width="180%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.2  0 1 0 0 1  0 0 0 0 0.1  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="red-g" x="-40%" y="-100%" width="180%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 1  0 0 0 0 0.2  0 0 0 0 0.2  0 0 0 0.9 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="gold-g" x="-10%" y="-60%" width="120%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1.2 0 0 0 0.1  0.8 0.5 0 0 0  0 0 0 0 0  0 0 0 0.5 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip"><rect width="900" height="110" rx="10"/></clipPath>
+  </defs>
+
+  <rect width="900" height="110" fill="#0A0A0C" rx="10"/>
+  <rect width="900" height="110" fill="url(#cf)" clip-path="url(#clip)"/>
+
+  <!-- Top gold line -->
+  <rect y="0" width="900" height="3" fill="url(#gold-line)"/>
+
+  <!-- Left: LIVE badge -->
+  <rect x="28" y="32" width="80" height="46" rx="8"
+        fill="#1A1C20" stroke="#FF3B3B" stroke-width="1.5" stroke-opacity="0.9"/>
+  <circle cx="48" cy="48" r="6" fill="#FF3B3B" filter="url(#red-g)"/>
+  <text x="68" y="52" font-family="Arial,sans-serif" font-size="10.5" font-weight="900"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="3">LIVE</text>
+  <text x="68" y="68" font-family="Arial,sans-serif" font-size="7.5" font-weight="600"
+        fill="#FFFFFF" text-anchor="middle" letter-spacing="1.5" opacity="0.5">SIGNALS</text>
+
+  <!-- Divider -->
+  <line x1="128" y1="25" x2="128" y2="85" stroke="#2A2D33" stroke-width="1"/>
+
+  <!-- Signal bars (waveform) -->
+  <!-- Bar 1 -->
+  <rect x="148" y="62" width="8" height="18" rx="2" fill="#2D7DFF" opacity="0.6"/>
+  <!-- Bar 2 -->
+  <rect x="162" y="50" width="8" height="30" rx="2" fill="#2D7DFF" opacity="0.75"/>
+  <!-- Bar 3 -->
+  <rect x="176" y="40" width="8" height="40" rx="2" fill="#D4AF37" opacity="0.9"/>
+  <!-- Bar 4 -->
+  <rect x="190" y="32" width="8" height="48" rx="2" fill="#39FF14" filter="url(#neon-g)"/>
+  <!-- Bar 5 -->
+  <rect x="204" y="40" width="8" height="40" rx="2" fill="#D4AF37" opacity="0.85"/>
+  <!-- Bar 6 -->
+  <rect x="218" y="50" width="8" height="30" rx="2" fill="#2D7DFF" opacity="0.7"/>
+  <!-- Bar 7 -->
+  <rect x="232" y="60" width="8" height="20" rx="2" fill="#2D7DFF" opacity="0.5"/>
+
+  <!-- Divider -->
+  <line x1="262" y1="25" x2="262" y2="85" stroke="#2A2D33" stroke-width="1"/>
+
+  <!-- Center: Signal items -->
+  <!-- Signal 1 -->
+  <circle cx="292" cy="44" r="4" fill="#39FF14" filter="url(#neon-g)"/>
+  <text x="306" y="48" font-family="Arial,sans-serif" font-size="11" font-weight="700"
+        fill="#FFFFFF">Arsenal vs Chelsea</text>
+  <text x="306" y="62" font-family="'Courier New',Courier,monospace" font-size="9"
+        fill="#D4AF37" letter-spacing="1">BTTS 78% · O2.5 72% · ALTA</text>
+
+  <line x1="278" y1="72" x2="680" y2="72" stroke="#2A2D33" stroke-width="0.7"/>
+
+  <!-- Signal 2 -->
+  <circle cx="292" cy="84" r="4" fill="#FF3B3B" filter="url(#red-g)"/>
+  <text x="306" y="88" font-family="Arial,sans-serif" font-size="10" font-weight="700"
+        fill="#FFFFFF" opacity="0.8">Man City vs Liverpool</text>
+  <text x="306" y="100" font-family="'Courier New',Courier,monospace" font-size="8.5"
+        fill="#D4AF37" letter-spacing="1" opacity="0.7">CRÍTICO · 1X2 85% · ALTA</text>
+
+  <!-- Divider -->
+  <line x1="692" y1="25" x2="692" y2="85" stroke="#2A2D33" stroke-width="1"/>
+
+  <!-- Right: Stats -->
+  <text x="730" y="46" font-family="Arial,sans-serif" font-size="7.5" fill="#D4AF37"
+        text-anchor="middle" letter-spacing="2" opacity="0.7">SINAIS HOJE</text>
+  <text x="730" y="68" font-family="'Arial Black',Arial,sans-serif" font-size="28"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle" filter="url(#gold-g)">14</text>
+
+  <line x1="762" y1="35" x2="762" y2="75" stroke="#2A2D33" stroke-width="1"/>
+
+  <text x="820" y="46" font-family="Arial,sans-serif" font-size="7.5" fill="#39FF14"
+        text-anchor="middle" letter-spacing="2" opacity="0.8">CRÍTICOS</text>
+  <text x="820" y="68" font-family="'Arial Black',Arial,sans-serif" font-size="28"
+        font-weight="900" fill="#FF3B3B" text-anchor="middle" filter="url(#red-g)">3</text>
+
+  <!-- Right border accent -->
+  <rect x="870" y="0" width="4" height="110" fill="#D4AF37" opacity="0.3"/>
+
+  <!-- Bottom gold line -->
+  <rect y="107" width="900" height="3" fill="url(#gold-line)"/>
+</svg>

@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 200" width="860" height="200" role="img" aria-label="Over 2.5 Scout — Badge Collection">
+  <title>Badge Collection</title>
+  <defs>
+    <linearGradient id="gold-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#9A7520"/>
+      <stop offset="40%"  stop-color="#D4AF37"/>
+      <stop offset="60%"  stop-color="#F0D060"/>
+      <stop offset="100%" stop-color="#9A7520"/>
+    </linearGradient>
+    <filter id="rg" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 1  0 0 0 0 0.2  0 0 0 0 0.2  0 0 0 0.9 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="gg" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.2  0 1 0 0 1  0 0 0 0 0.1  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="gold-g" x="-15%" y="-60%" width="130%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1.2 0 0 0 0.1  0.8 0.5 0 0 0  0 0 0 0 0  0 0 0 0.5 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bg-f" x="-15%" y="-60%" width="130%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.18  0 0.5 0 0 1  0 0 0 0 0.5  0 0 0 0.7 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- BG -->
+  <rect width="860" height="200" fill="#0A0A0C" rx="12"/>
+
+  <!-- Section title -->
+  <text x="430" y="26" font-family="Arial,sans-serif" font-size="9" fill="#FFFFFF"
+        text-anchor="middle" letter-spacing="4" opacity="0.35">BADGE SYSTEM</text>
+  <line x1="40" y1="32" x2="820" y2="32" stroke="#2A2D33" stroke-width="0.8"/>
+
+  <!-- ── ROW 1: Confidence Badges ── -->
+  <text x="40" y="58" font-family="Arial,sans-serif" font-size="8" fill="#FFFFFF"
+        letter-spacing="2.5" opacity="0.3">CONFIANÇA</text>
+
+  <!-- ALTA badge -->
+  <rect x="40" y="66" width="80" height="28" rx="6"
+        fill="#0A1A0A" stroke="#39FF14" stroke-width="1.2"/>
+  <circle cx="56" cy="80" r="4" fill="#39FF14" filter="url(#gg)"/>
+  <text x="76" y="84" font-family="Arial,sans-serif" font-size="11" font-weight="800"
+        fill="#39FF14" text-anchor="middle" letter-spacing="1.5">ALTA</text>
+
+  <!-- MÉDIA badge -->
+  <rect x="132" y="66" width="88" height="28" rx="6"
+        fill="#1A1400" stroke="#D4AF37" stroke-width="1.2"/>
+  <circle cx="148" cy="80" r="4" fill="#D4AF37" filter="url(#gold-g)"/>
+  <text x="173" y="84" font-family="Arial,sans-serif" font-size="11" font-weight="800"
+        fill="#D4AF37" text-anchor="middle" letter-spacing="1.5">MÉDIA</text>
+
+  <!-- BAIXA badge -->
+  <rect x="232" y="66" width="88" height="28" rx="6"
+        fill="#1A0A0A" stroke="#FF3B3B" stroke-width="1.2"/>
+  <circle cx="248" cy="80" r="4" fill="#FF3B3B" filter="url(#rg)"/>
+  <text x="273" y="84" font-family="Arial,sans-serif" font-size="11" font-weight="800"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="1.5">BAIXA</text>
+
+  <!-- LIVE badge -->
+  <rect x="332" y="66" width="80" height="28" rx="6"
+        fill="#1A0A0A" stroke="#FF3B3B" stroke-width="1.8" stroke-opacity="0.9"/>
+  <circle cx="348" cy="80" r="5" fill="#FF3B3B" filter="url(#rg)"/>
+  <text x="373" y="84" font-family="Arial,sans-serif" font-size="11" font-weight="800"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="2.5">LIVE</text>
+
+  <!-- VALUE badge -->
+  <rect x="424" y="66" width="96" height="28" rx="6"
+        fill="#1A1200" stroke="#D4AF37" stroke-width="1.5"/>
+  <text x="472" y="79" font-family="Arial,sans-serif" font-size="7.5" fill="#D4AF37"
+        text-anchor="middle" letter-spacing="2" opacity="0.8">★ VALUE BET ★</text>
+  <line x1="432" y1="82" x2="512" y2="82" stroke="#D4AF37" stroke-width="0.6" opacity="0.4"/>
+  <text x="472" y="89" font-family="'Courier New',Courier,monospace" font-size="7"
+        fill="#D4AF37" text-anchor="middle" opacity="0.65">edge +5.2%</text>
+
+  <!-- SCANNER badge -->
+  <rect x="532" y="66" width="100" height="28" rx="6"
+        fill="#0A0A1A" stroke="#2D7DFF" stroke-width="1.2"/>
+  <circle cx="548" cy="80" r="4" fill="#2D7DFF" filter="url(#bg-f)"/>
+  <text x="578" y="84" font-family="Arial,sans-serif" font-size="10" font-weight="800"
+        fill="#2D7DFF" text-anchor="middle" letter-spacing="1.5">SCANNER</text>
+
+  <!-- CRÍTICO badge -->
+  <rect x="645" y="66" width="96" height="28" rx="6"
+        fill="#1A0808" stroke="#FF3B3B" stroke-width="2"/>
+  <!-- X icon -->
+  <line x1="659" y1="74" x2="667" y2="82" stroke="#FF3B3B" stroke-width="2" stroke-linecap="round" filter="url(#rg)"/>
+  <line x1="667" y1="74" x2="659" y2="82" stroke="#FF3B3B" stroke-width="2" stroke-linecap="round" filter="url(#rg)"/>
+  <text x="704" y="84" font-family="Arial,sans-serif" font-size="10.5" font-weight="900"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="1">CRÍTICO</text>
+
+  <!-- ── ROW 2: Premium stat badges ── -->
+  <line x1="40" y1="116" x2="820" y2="116" stroke="#2A2D33" stroke-width="0.8"/>
+  <text x="40" y="136" font-family="Arial,sans-serif" font-size="8" fill="#FFFFFF"
+        letter-spacing="2.5" opacity="0.3">BADGES PREMIUM</text>
+
+  <!-- Pill: 83.3% 1X2 -->
+  <rect x="40" y="144" width="120" height="40" rx="8"
+        fill="#1A1C20" stroke="#2D7DFF" stroke-width="1" stroke-opacity="0.6"/>
+  <text x="100" y="160" font-family="Arial,sans-serif" font-size="8" fill="#2D7DFF"
+        text-anchor="middle" letter-spacing="2" opacity="0.8">1X2 PICK HR</text>
+  <text x="100" y="177" font-family="'Arial Black',Arial,sans-serif" font-size="17"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">83.3%</text>
+
+  <!-- Pill: BTTS -->
+  <rect x="172" y="144" width="120" height="40" rx="8"
+        fill="#1A1C20" stroke="#39FF14" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="232" y="160" font-family="Arial,sans-serif" font-size="8" fill="#39FF14"
+        text-anchor="middle" letter-spacing="2" opacity="0.8">BTTS PICK HR</text>
+  <text x="232" y="177" font-family="'Arial Black',Arial,sans-serif" font-size="17"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">65.7%</text>
+
+  <!-- Pill: Triplas -->
+  <rect x="304" y="144" width="120" height="40" rx="8"
+        fill="#1A1C20" stroke="#FF3B3B" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="364" y="160" font-family="Arial,sans-serif" font-size="8" fill="#FF3B3B"
+        text-anchor="middle" letter-spacing="2" opacity="0.8">TRIPLAS</text>
+  <text x="364" y="177" font-family="'Arial Black',Arial,sans-serif" font-size="17"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">7 / 9</text>
+
+  <!-- Gold premium pill -->
+  <rect x="436" y="144" width="180" height="40" rx="8"
+        fill="#1A1200" stroke="#D4AF37" stroke-width="1.5"/>
+  <text x="526" y="159" font-family="Arial,sans-serif" font-size="8" fill="#D4AF37"
+        text-anchor="middle" letter-spacing="2.5" filter="url(#gold-g)">★ SHARP ANALYSIS ★</text>
+  <line x1="446" y1="163" x2="606" y2="163" stroke="#D4AF37" stroke-width="0.6" opacity="0.35"/>
+  <text x="526" y="178" font-family="'Arial Black',Arial,sans-serif" font-size="13"
+        font-weight="900" fill="url(#gold-h)" text-anchor="middle">OVER 2.5 SCOUT</text>
+
+  <!-- CTA button style -->
+  <rect x="632" y="144" width="190" height="40" rx="8"
+        fill="#D4AF37"/>
+  <text x="727" y="169" font-family="'Arial Black',Arial,sans-serif" font-size="14"
+        font-weight="900" fill="#0A0A0C" text-anchor="middle" letter-spacing="1">VER DASHBOARD</text>
+</svg>

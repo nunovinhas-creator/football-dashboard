@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="CRÍTICO">
+  <title>CRÍTICO</title>
+  <defs>
+    <filter id="rg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 1  0 0 0 0 0.2  0 0 0 0 0.2  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="red-v" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="100%" stop-color="#FF3B3B"/>
+    </linearGradient>
+  </defs>
+  <!-- Dark background disc -->
+  <circle cx="24" cy="24" r="23" fill="#1A1C20" stroke="#FF3B3B" stroke-width="1.5" stroke-opacity="0.85"/>
+  <!-- Outer alert ring -->
+  <circle cx="24" cy="24" r="19" fill="none" stroke="#FF3B3B" stroke-width="0.7" opacity="0.3"/>
+  <!-- Octagon "stop sign" shape -->
+  <polygon points="17,7 31,7 41,17 41,31 31,41 17,41 7,31 7,17"
+           fill="#1A1C20" stroke="url(#red-v)" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Inner fill -->
+  <polygon points="17,7 31,7 41,17 41,31 31,41 17,41 7,31 7,17"
+           fill="#FF3B3B" fill-opacity="0.06"/>
+  <!-- X mark -->
+  <line x1="16" y1="16" x2="32" y2="32" stroke="url(#red-v)" stroke-width="3.5"
+        stroke-linecap="round" filter="url(#rg)"/>
+  <line x1="32" y1="16" x2="16" y2="32" stroke="url(#red-v)" stroke-width="3.5"
+        stroke-linecap="round" filter="url(#rg)"/>
+  <!-- Label -->
+  <text x="24" y="46" font-family="Arial,sans-serif" font-size="6" font-weight="800"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="1">CRÍTICO</text>
+</svg>
