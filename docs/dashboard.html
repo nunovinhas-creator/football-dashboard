@@ -259,24 +259,91 @@ body{background:var(--bg);color:var(--text);font-family:"Albert Sans","Segoe UI"
   margin-top:10px
 }
 
+/* TOP ACCENT */
+.top-accent{
+  height:3px;
+  background:linear-gradient(90deg,
+    oklch(70% 0.12 188 / 0) 0%,
+    oklch(70% 0.12 188) 12%,
+    oklch(84% 0.19 80.46) 50%,
+    oklch(65% 0.2 290) 88%,
+    oklch(65% 0.2 290 / 0) 100%
+  );
+}
+
+/* PERF STRIP */
+.perf-strip{
+  display:flex;overflow-x:auto;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  scrollbar-width:none;
+}
+.perf-strip::-webkit-scrollbar{display:none}
+.perf-item{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 18px;
+  border-right:1px solid var(--border);
+  white-space:nowrap;flex-shrink:0;
+}
+.perf-item:first-child{padding-left:4px}
+.perf-item:last-child{border-right:none}
+.perf-mini-bar{width:30px;height:3px;background:var(--graphite2);border-radius:2px;overflow:hidden;flex-shrink:0}
+.perf-mini-fill{height:100%;border-radius:2px}
+.perf-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.perf-val{font-size:.8rem;font-weight:800;letter-spacing:-.3px}
+.pv-purple{color:oklch(73% 0.17 290)}
+.pv-teal{color:var(--teal)}
+.pv-gold{color:var(--gold)}
+.pv-orange{color:oklch(75% 0.16 52)}
+.pv-muted{color:var(--sub)}
+
 @media(max-width:580px){
   .header,.filters,.cards-wrap{padding-left:14px;padding-right:14px}
   .team{font-size:.85rem}
   .stats-strip .stat-n{font-size:1.4rem}
   .filters{gap:5px}
+  .perf-strip{padding:0 14px}
+  .perf-item{padding:8px 12px}
 }
 </style>
 </head>
 <body>
+<div class="top-accent"></div>
 <div class="header">
   <div class="header-left">
     <h1>⚽ Matemática Da Bola</h1>
-    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-06-04 10:27 UTC</div>
+    <div class="meta"><span class="live-dot"></span>Actualizado em 2026-06-04 10:39 UTC</div>
   </div>
 </div>
 <div class="tabs">
   <a href="dashboard.html" class="tab active">📊 Dashboard</a>
   <a href="backtest.html"  class="tab">🔬 Backtest</a>
+</div>
+<div class="perf-strip">
+  <div class="perf-item">
+    <div class="perf-mini-bar"><div class="perf-mini-fill" style="width:83%;background:oklch(73% 0.17 290)"></div></div>
+    <span class="perf-lbl">1X2</span>
+    <span class="perf-val pv-purple">83.3%</span>
+  </div>
+  <div class="perf-item">
+    <div class="perf-mini-bar"><div class="perf-mini-fill" style="width:66%;background:var(--teal)"></div></div>
+    <span class="perf-lbl">BTTS</span>
+    <span class="perf-val pv-teal">65.7%</span>
+  </div>
+  <div class="perf-item">
+    <div class="perf-mini-bar"><div class="perf-mini-fill" style="width:61%;background:var(--gold)"></div></div>
+    <span class="perf-lbl">O2.5</span>
+    <span class="perf-val pv-gold">60.5%</span>
+  </div>
+  <div class="perf-item">
+    <span class="perf-lbl">Triplas</span>
+    <span class="perf-val pv-orange">5/8</span>
+  </div>
+  <div class="perf-item">
+    <span class="perf-lbl">Amostra</span>
+    <span class="perf-val pv-muted">359 reg.</span>
+  </div>
 </div>
 <div class="stats-strip">
   <div class="stat-item"><div class="stat-n" style="color:var(--blue)">14</div><div class="stat-l">Jogos hoje</div></div>
