@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 500" width="300" height="500" role="img" aria-label="Over 2.5 Scout — Vertical Banner">
+  <title>Over 2.5 Scout</title>
+  <defs>
+    <pattern id="cf" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#0A0A0C"/>
+      <rect x="0" y="0" width="3" height="3" fill="#0F0F14"/>
+      <rect x="3" y="3" width="3" height="3" fill="#0F0F14"/>
+      <line x1="0" y1="0" x2="3" y2="0" stroke="#1A1A22" stroke-width="0.4" opacity="0.7"/>
+      <line x1="0" y1="0" x2="0" y2="3" stroke="#1A1A22" stroke-width="0.4" opacity="0.7"/>
+      <line x1="3" y1="3" x2="6" y2="3" stroke="#1A1A22" stroke-width="0.4" opacity="0.7"/>
+      <line x1="3" y1="3" x2="3" y2="6" stroke="#1A1A22" stroke-width="0.4" opacity="0.7"/>
+    </pattern>
+    <linearGradient id="gold-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#8B6914"/>
+      <stop offset="40%"  stop-color="#D4AF37"/>
+      <stop offset="60%"  stop-color="#F0D060"/>
+      <stop offset="100%" stop-color="#9A7520"/>
+    </linearGradient>
+    <linearGradient id="gold-v" x1="0" y1="0" x2="0" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#D4AF37" stop-opacity="0"/>
+      <stop offset="8%"   stop-color="#D4AF37"/>
+      <stop offset="92%"  stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="neon-g" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.2  0 1 0 0 1  0 0 0 0 0.1  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="gold-g" x="-15%" y="-40%" width="130%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1.2 0 0 0 0.1  0.8 0.5 0 0 0  0 0 0 0 0  0 0 0 0.55 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="red-g" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 1  0 0 0 0 0.2  0 0 0 0 0.2  0 0 0 0.9 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip"><rect width="300" height="500" rx="14"/></clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="300" height="500" fill="#0A0A0C" rx="14"/>
+  <rect width="300" height="500" fill="url(#cf)" clip-path="url(#clip)"/>
+
+  <!-- Top accent line -->
+  <rect y="0" width="300" height="4" fill="url(#gold-h)"/>
+
+  <!-- ── TOP: Icon & Title ── -->
+  <!-- Target scope icon -->
+  <circle cx="150" cy="90" r="52" fill="none" stroke="#D4AF37" stroke-width="0.7" opacity="0.2"/>
+  <circle cx="150" cy="90" r="40" fill="none" stroke="#D4AF37" stroke-width="0.9" opacity="0.35"/>
+  <circle cx="150" cy="90" r="28" fill="#1A1C20" stroke="#D4AF37" stroke-width="1.8"/>
+  <!-- Crosshairs -->
+  <line x1="150" y1="50" x2="150" y2="60" stroke="#D4AF37" stroke-width="2" opacity="0.7"/>
+  <line x1="150" y1="120" x2="150" y2="130" stroke="#D4AF37" stroke-width="2" opacity="0.7"/>
+  <line x1="100" y1="90" x2="110" y2="90" stroke="#D4AF37" stroke-width="2" opacity="0.7"/>
+  <line x1="190" y1="90" x2="200" y2="90" stroke="#D4AF37" stroke-width="2" opacity="0.7"/>
+  <!-- Inner text -->
+  <text x="150" y="84" font-family="Arial,sans-serif" font-size="8" font-weight="700"
+        fill="#D4AF37" text-anchor="middle" letter-spacing="2">OVER</text>
+  <text x="150" y="101" font-family="'Arial Black',Arial,sans-serif" font-size="18"
+        font-weight="900" fill="#D4AF37" text-anchor="middle" filter="url(#gold-g)">2.5</text>
+
+  <!-- Title -->
+  <text x="150" y="165" font-family="'Arial Black',Arial,sans-serif"
+        font-size="22" font-weight="900" fill="url(#gold-h)"
+        text-anchor="middle" letter-spacing="-0.5" filter="url(#gold-g)">OVER 2.5 SCOUT</text>
+
+  <!-- Tagline -->
+  <text x="150" y="185" font-family="'Courier New',Courier,monospace"
+        font-size="8" fill="#FFFFFF" text-anchor="middle" letter-spacing="2" opacity="0.5">
+    SHARP ANALYSIS
+  </text>
+
+  <!-- Separator -->
+  <line x1="40" y1="200" x2="260" y2="200" stroke="#2A2D33" stroke-width="1"/>
+  <line x1="40" y1="200" x2="140" y2="200" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
+
+  <!-- ── MIDDLE: Stats Blocks ── -->
+  <!-- Stat 1 -->
+  <rect x="30" y="216" width="110" height="70" rx="8"
+        fill="#1A1C20" stroke="#D4AF37" stroke-width="0.9" stroke-opacity="0.4"/>
+  <text x="85" y="238" font-family="Arial,sans-serif" font-size="7.5" fill="#D4AF37"
+        text-anchor="middle" letter-spacing="1.5" opacity="0.7">REGISTOS</text>
+  <text x="85" y="264" font-family="'Arial Black',Arial,sans-serif" font-size="26"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">359</text>
+  <text x="85" y="278" font-family="Arial,sans-serif" font-size="7" fill="#D4AF37"
+        text-anchor="middle" opacity="0.5">histórico total</text>
+
+  <!-- Stat 2 -->
+  <rect x="160" y="216" width="110" height="70" rx="8"
+        fill="#1A1C20" stroke="#2D7DFF" stroke-width="0.9" stroke-opacity="0.5"/>
+  <text x="215" y="238" font-family="Arial,sans-serif" font-size="7.5" fill="#2D7DFF"
+        text-anchor="middle" letter-spacing="1.5" opacity="0.8">1X2 PICK</text>
+  <text x="215" y="264" font-family="'Arial Black',Arial,sans-serif" font-size="22"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">83.3%</text>
+  <text x="215" y="278" font-family="Arial,sans-serif" font-size="7" fill="#2D7DFF"
+        text-anchor="middle" opacity="0.6">hit rate</text>
+
+  <!-- Stat 3 -->
+  <rect x="30" y="300" width="110" height="70" rx="8"
+        fill="#1A1C20" stroke="#39FF14" stroke-width="0.9" stroke-opacity="0.35"/>
+  <text x="85" y="322" font-family="Arial,sans-serif" font-size="7.5" fill="#39FF14"
+        text-anchor="middle" letter-spacing="1.5" opacity="0.8">BTTS PICK</text>
+  <text x="85" y="348" font-family="'Arial Black',Arial,sans-serif" font-size="22"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">65.7%</text>
+  <text x="85" y="362" font-family="Arial,sans-serif" font-size="7" fill="#39FF14"
+        text-anchor="middle" opacity="0.6">hit rate</text>
+
+  <!-- Stat 4 -->
+  <rect x="160" y="300" width="110" height="70" rx="8"
+        fill="#1A1C20" stroke="#FF3B3B" stroke-width="0.9" stroke-opacity="0.4"/>
+  <text x="215" y="322" font-family="Arial,sans-serif" font-size="7.5" fill="#FF3B3B"
+        text-anchor="middle" letter-spacing="1.5" opacity="0.8">TRIPLAS</text>
+  <text x="215" y="348" font-family="'Arial Black',Arial,sans-serif" font-size="22"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">7/9</text>
+  <text x="215" y="362" font-family="Arial,sans-serif" font-size="7" fill="#FF3B3B"
+        text-anchor="middle" opacity="0.6">acumuladores</text>
+
+  <!-- ── BOTTOM: CTA + LIVE badge ── -->
+  <line x1="40" y1="390" x2="260" y2="390" stroke="#2A2D33" stroke-width="1"/>
+
+  <!-- LIVE badge -->
+  <rect x="85" y="406" width="130" height="34" rx="8"
+        fill="#1A1C20" stroke="#FF3B3B" stroke-width="1.5" stroke-opacity="0.9"/>
+  <circle cx="104" cy="423" r="5" fill="#FF3B3B" filter="url(#red-g)"/>
+  <text x="155" y="428" font-family="Arial,sans-serif" font-size="11" font-weight="800"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="3">LIVE SCANNER</text>
+
+  <!-- Tagline bottom -->
+  <text x="150" y="462" font-family="'Courier New',Courier,monospace"
+        font-size="8.5" fill="#D4AF37" text-anchor="middle" letter-spacing="1.5"
+        filter="url(#gold-g)" opacity="0.8">matemáticadabola.pt</text>
+
+  <!-- Visit counter look -->
+  <rect x="90" y="472" width="120" height="18" rx="4"
+        fill="#1A1C20" stroke="#2A2D33" stroke-width="0.8"/>
+  <text x="150" y="484" font-family="'Courier New',Courier,monospace"
+        font-size="8" fill="#39FF14" text-anchor="middle" letter-spacing="1"
+        filter="url(#neon-g)">Powered by BSD API v2</text>
+
+  <!-- Bottom accent line -->
+  <rect y="496" width="300" height="4" fill="url(#gold-h)"/>
+
+  <!-- Side accent stripes -->
+  <rect x="0" y="0" width="4" height="500" fill="#D4AF37" opacity="0.4" clip-path="url(#clip)"/>
+  <rect x="296" y="0" width="4" height="500" fill="#D4AF37" opacity="0.4" clip-path="url(#clip)"/>
+</svg>

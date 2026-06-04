@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="PICKS">
+  <title>PICKS</title>
+  <defs>
+    <filter id="gg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.2  0 1 0 0 1  0 0 0 0 0.1  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="gold-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8B6914"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8B6914"/>
+    </linearGradient>
+  </defs>
+  <!-- Background disc -->
+  <circle cx="24" cy="24" r="23" fill="#1A1C20" stroke="#D4AF37" stroke-width="1.2" stroke-opacity="0.5"/>
+  <!-- Target rings -->
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#D4AF37" stroke-width="0.8" opacity="0.3"/>
+  <circle cx="24" cy="24" r="12" fill="none" stroke="#D4AF37" stroke-width="0.8" opacity="0.45"/>
+  <!-- Inner colored ring (gold) -->
+  <circle cx="24" cy="24" r="7" fill="none" stroke="#D4AF37" stroke-width="2.5" opacity="0.85"/>
+  <!-- Bullseye (neon green) -->
+  <circle cx="24" cy="24" r="3.5" fill="#39FF14" filter="url(#gg)"/>
+  <!-- Tick marks -->
+  <line x1="24" y1="5" x2="24" y2="9" stroke="#D4AF37" stroke-width="1.5" opacity="0.55"/>
+  <line x1="24" y1="39" x2="24" y2="43" stroke="#D4AF37" stroke-width="1.5" opacity="0.55"/>
+  <line x1="5" y1="24" x2="9" y2="24" stroke="#D4AF37" stroke-width="1.5" opacity="0.55"/>
+  <line x1="39" y1="24" x2="43" y2="24" stroke="#D4AF37" stroke-width="1.5" opacity="0.55"/>
+  <!-- Check tick (top right confirm) -->
+  <polyline points="32,10 35,13 39,8" fill="none" stroke="#39FF14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#gg)"/>
+  <!-- Label -->
+  <text x="24" y="44" font-family="Arial,sans-serif" font-size="6.5" font-weight="800"
+        fill="#D4AF37" text-anchor="middle" letter-spacing="1.5">PICKS</text>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="LIVE">
+  <title>LIVE</title>
+  <defs>
+    <filter id="rg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 1  0 0 0 0 0.2  0 0 0 0 0.2  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Dark background disc -->
+  <circle cx="24" cy="24" r="23" fill="#1A1C20" stroke="#FF3B3B" stroke-width="1.2" stroke-opacity="0.7"/>
+  <!-- Outer pulse rings -->
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#FF3B3B" stroke-width="0.8" opacity="0.25"/>
+  <circle cx="24" cy="24" r="13" fill="none" stroke="#FF3B3B" stroke-width="0.8" opacity="0.4"/>
+  <!-- Center live dot -->
+  <circle cx="24" cy="24" r="7" fill="#FF3B3B" filter="url(#rg)"/>
+  <!-- Broadcast bars (top-left and top-right arcs) -->
+  <path d="M14 14 A14 14 0 0 1 34 14" fill="none" stroke="#FF3B3B" stroke-width="1.8" opacity="0.6" stroke-linecap="round"/>
+  <path d="M10 10 A20 20 0 0 1 38 10" fill="none" stroke="#FF3B3B" stroke-width="1.2" opacity="0.3" stroke-linecap="round"/>
+  <!-- "LIVE" text -->
+  <text x="24" y="43" font-family="Arial,sans-serif" font-size="7.5" font-weight="900"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="2">LIVE</text>
+</svg>

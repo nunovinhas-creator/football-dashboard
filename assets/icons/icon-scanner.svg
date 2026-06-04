@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="SCANNER">
+  <title>SCANNER</title>
+  <defs>
+    <filter id="bg" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="0 0 0 0 0.18  0 0.5 0 0 1  0 0 0 0 0.5  0 0 0 0.9 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="sweep" x1="0.5" y1="0.5" x2="1" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#2D7DFF" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#2D7DFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Background disc -->
+  <circle cx="24" cy="24" r="23" fill="#1A1C20" stroke="#2D7DFF" stroke-width="1.2" stroke-opacity="0.6"/>
+  <!-- Radar rings -->
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#2D7DFF" stroke-width="0.7" opacity="0.35"/>
+  <circle cx="24" cy="24" r="12" fill="none" stroke="#2D7DFF" stroke-width="0.7" opacity="0.5"/>
+  <circle cx="24" cy="24" r="6" fill="none" stroke="#2D7DFF" stroke-width="0.7" opacity="0.7"/>
+  <!-- Sweep sector -->
+  <path d="M24 24 L42 24 A18 18 0 0 0 24 6 Z" fill="url(#sweep)"/>
+  <!-- Center dot -->
+  <circle cx="24" cy="24" r="3" fill="#2D7DFF" filter="url(#bg)"/>
+  <!-- Scan dot (on sweep edge) -->
+  <circle cx="42" cy="24" r="2.5" fill="#2D7DFF" filter="url(#bg)"/>
+  <!-- Cross hairs -->
+  <line x1="24" y1="5" x2="24" y2="8" stroke="#2D7DFF" stroke-width="1" opacity="0.5"/>
+  <line x1="24" y1="40" x2="24" y2="43" stroke="#2D7DFF" stroke-width="1" opacity="0.5"/>
+  <line x1="5" y1="24" x2="8" y2="24" stroke="#2D7DFF" stroke-width="1" opacity="0.5"/>
+  <line x1="40" y1="24" x2="43" y2="24" stroke="#2D7DFF" stroke-width="1" opacity="0.5"/>
+  <!-- Label -->
+  <text x="24" y="44" font-family="Arial,sans-serif" font-size="6" font-weight="800"
+        fill="#2D7DFF" text-anchor="middle" letter-spacing="1.5">SCANNER</text>
+</svg>

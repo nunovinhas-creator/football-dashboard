@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" width="900" height="200" role="img" aria-label="Over 2.5 Scout — Sharp Football Analysis">
+  <title>Over 2.5 Scout</title>
+  <defs>
+    <!-- Carbon fiber weave texture -->
+    <pattern id="cf" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#0A0A0C"/>
+      <rect x="0" y="0" width="4" height="4" fill="#111116"/>
+      <rect x="4" y="4" width="4" height="4" fill="#111116"/>
+      <line x1="0" y1="0" x2="4" y2="0" stroke="#1C1C24" stroke-width="0.5" opacity="0.8"/>
+      <line x1="0" y1="0" x2="0" y2="4" stroke="#1C1C24" stroke-width="0.5" opacity="0.8"/>
+      <line x1="4" y1="4" x2="8" y2="4" stroke="#1C1C24" stroke-width="0.5" opacity="0.8"/>
+      <line x1="4" y1="4" x2="4" y2="8" stroke="#1C1C24" stroke-width="0.5" opacity="0.8"/>
+    </pattern>
+    <!-- Gold shimmer -->
+    <linearGradient id="gold-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#8B6914"/>
+      <stop offset="35%"  stop-color="#D4AF37"/>
+      <stop offset="55%"  stop-color="#F0D060"/>
+      <stop offset="80%"  stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#9A7520"/>
+    </linearGradient>
+    <!-- Gold accent line gradient -->
+    <linearGradient id="gold-line" x1="0" y1="0" x2="900" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#D4AF37" stop-opacity="0"/>
+      <stop offset="12%"  stop-color="#D4AF37" stop-opacity="0.9"/>
+      <stop offset="88%"  stop-color="#D4AF37" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Radial vignette -->
+    <radialGradient id="vig" cx="50%" cy="50%" r="70%" gradientUnits="objectBoundingBox">
+      <stop offset="50%" stop-color="#0A0A0C" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0A0A0C" stop-opacity="0.65"/>
+    </radialGradient>
+    <!-- Neon green glow filter -->
+    <filter id="neon-g" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="0 0 0 0 0.2  0 1 0 0 1  0 0 0 0 0.1  0 0 0 1 0" result="colored"/>
+      <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Gold glow filter -->
+    <filter id="gold-g" x="-8%" y="-40%" width="116%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1.2 0 0 0 0.1  0.8 0.6 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="colored"/>
+      <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Red glow filter -->
+    <filter id="red-g" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 1  0 0 0 0 0.2  0 0 0 0 0.2  0 0 0 0.8 0" result="colored"/>
+      <feMerge><feMergeNode in="colored"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="clip"><rect width="900" height="200" rx="14"/></clipPath>
+  </defs>
+
+  <!-- BG: deep black -->
+  <rect width="900" height="200" fill="#0A0A0C" rx="14"/>
+  <!-- Carbon fiber texture -->
+  <rect width="900" height="200" fill="url(#cf)" clip-path="url(#clip)"/>
+  <!-- Vignette overlay -->
+  <rect width="900" height="200" fill="url(#vig)" clip-path="url(#clip)"/>
+
+  <!-- Top gold accent line (3px) -->
+  <rect y="0" width="900" height="3" fill="url(#gold-line)" rx="1.5"/>
+  <!-- Left gold stripe -->
+  <rect x="0" y="0" width="5" height="200" fill="#D4AF37" opacity="0.55" clip-path="url(#clip)"/>
+
+  <!-- ── LEFT: Target / Scope Icon ── -->
+  <!-- Outermost decorative ring -->
+  <circle cx="76" cy="100" r="46" fill="none" stroke="#D4AF37" stroke-width="0.7" opacity="0.22"/>
+  <!-- Middle ring -->
+  <circle cx="76" cy="100" r="35" fill="none" stroke="#D4AF37" stroke-width="0.9" opacity="0.35"/>
+  <!-- Inner ring -->
+  <circle cx="76" cy="100" r="24" fill="#1A1C20" stroke="#D4AF37" stroke-width="1.5" opacity="0.9"/>
+  <!-- Crosshairs -->
+  <line x1="76" y1="54"  x2="76" y2="65"  stroke="#D4AF37" stroke-width="1.5" opacity="0.7"/>
+  <line x1="76" y1="135" x2="76" y2="146" stroke="#D4AF37" stroke-width="1.5" opacity="0.7"/>
+  <line x1="30" y1="100" x2="41" y2="100" stroke="#D4AF37" stroke-width="1.5" opacity="0.7"/>
+  <line x1="111" y1="100" x2="122" y2="100" stroke="#D4AF37" stroke-width="1.5" opacity="0.7"/>
+  <!-- Center fill -->
+  <circle cx="76" cy="100" r="11" fill="#D4AF37" opacity="0.12" filter="url(#gold-g)"/>
+  <!-- "OVER" label -->
+  <text x="76" y="95" font-family="Arial,sans-serif" font-size="7.5" font-weight="700"
+        fill="#D4AF37" text-anchor="middle" letter-spacing="1.5" opacity="0.85">OVER</text>
+  <!-- "2.5" large -->
+  <text x="76" y="110" font-family="'Arial Black',Arial,sans-serif" font-size="15"
+        font-weight="900" fill="#D4AF37" text-anchor="middle" filter="url(#gold-g)">2.5</text>
+
+  <!-- ── CENTER: Title + Tagline + Pills ── -->
+  <!-- Main title -->
+  <text x="148" y="74"
+        font-family="'Arial Black','Impact',Arial,sans-serif"
+        font-size="40" font-weight="900" fill="url(#gold-h)"
+        letter-spacing="-0.8" filter="url(#gold-g)">OVER 2.5 SCOUT</text>
+
+  <!-- Tagline -->
+  <text x="150" y="98"
+        font-family="'Courier New',Courier,monospace"
+        font-size="10.5" fill="#FFFFFF" letter-spacing="2.8" opacity="0.55">
+    SHARP ANALYSIS  ·  LIVE SIGNALS  ·  CRITICAL ALERTS
+  </text>
+
+  <!-- Separator -->
+  <line x1="150" y1="112" x2="635" y2="112" stroke="#2A2D33" stroke-width="0.8"/>
+  <line x1="150" y1="112" x2="280" y2="112" stroke="#D4AF37" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Pill 1: Registos (gold) -->
+  <rect x="150" y="124" width="93" height="38" rx="7"
+        fill="#1A1C20" stroke="#D4AF37" stroke-width="0.9" stroke-opacity="0.45"/>
+  <text x="196" y="138" font-family="Arial,sans-serif" font-size="7" fill="#D4AF37"
+        text-anchor="middle" letter-spacing="1.8" opacity="0.75">REGISTOS</text>
+  <text x="196" y="155" font-family="'Arial Black',Arial,sans-serif" font-size="15"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">359</text>
+
+  <!-- Pill 2: 1X2 (blue) -->
+  <rect x="251" y="124" width="93" height="38" rx="7"
+        fill="#1A1C20" stroke="#2D7DFF" stroke-width="0.9" stroke-opacity="0.55"/>
+  <text x="297" y="138" font-family="Arial,sans-serif" font-size="7" fill="#2D7DFF"
+        text-anchor="middle" letter-spacing="1.8" opacity="0.85">1X2 PICK</text>
+  <text x="297" y="155" font-family="'Arial Black',Arial,sans-serif" font-size="15"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">83.3%</text>
+
+  <!-- Pill 3: BTTS (neon green) -->
+  <rect x="352" y="124" width="93" height="38" rx="7"
+        fill="#1A1C20" stroke="#39FF14" stroke-width="0.9" stroke-opacity="0.4"/>
+  <text x="398" y="138" font-family="Arial,sans-serif" font-size="7" fill="#39FF14"
+        text-anchor="middle" letter-spacing="1.8" opacity="0.85">BTTS PICK</text>
+  <text x="398" y="155" font-family="'Arial Black',Arial,sans-serif" font-size="15"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">65.7%</text>
+
+  <!-- Pill 4: Triplas (red) -->
+  <rect x="453" y="124" width="93" height="38" rx="7"
+        fill="#1A1C20" stroke="#FF3B3B" stroke-width="0.9" stroke-opacity="0.45"/>
+  <text x="499" y="138" font-family="Arial,sans-serif" font-size="7" fill="#FF3B3B"
+        text-anchor="middle" letter-spacing="1.8" opacity="0.85">TRIPLAS</text>
+  <text x="499" y="155" font-family="'Arial Black',Arial,sans-serif" font-size="15"
+        font-weight="900" fill="#FFFFFF" text-anchor="middle">7 / 9</text>
+
+  <!-- ── RIGHT: Circular gauge ── -->
+  <!-- Outer decorative ring -->
+  <circle cx="825" cy="100" r="60" fill="none" stroke="#2A2D33" stroke-width="0.8"/>
+  <!-- Track -->
+  <circle cx="825" cy="100" r="48" fill="none" stroke="#1A1C20" stroke-width="12"/>
+  <!-- Progress arc 83.3%: circ = 2π×48 ≈ 301.6; arc = 0.833×301.6 ≈ 251.2; offset = 301.6/4 ≈ 75.4 -->
+  <circle cx="825" cy="100" r="48" fill="none" stroke="#D4AF37" stroke-width="12"
+          stroke-dasharray="251.2 301.6" stroke-dashoffset="75.4"
+          stroke-linecap="round" filter="url(#gold-g)"/>
+  <!-- Inner disc -->
+  <circle cx="825" cy="100" r="38" fill="#111116"/>
+  <!-- Live pulse dot (top of arc) -->
+  <circle cx="825" cy="52" r="5" fill="#39FF14" filter="url(#neon-g)"/>
+  <!-- Center percentage -->
+  <text x="825" y="98" font-family="'Arial Black',Arial,sans-serif"
+        font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">83.3%</text>
+  <text x="825" y="114" font-family="Arial,sans-serif" font-size="8.5" fill="#D4AF37"
+        text-anchor="middle" letter-spacing="2" opacity="0.9">1X2 HR</text>
+
+  <!-- Axis ticks -->
+  <line x1="825" y1="42" x2="825" y2="50" stroke="#2A2D33" stroke-width="1.5"/>
+  <line x1="825" y1="150" x2="825" y2="158" stroke="#2A2D33" stroke-width="1.5"/>
+  <line x1="767" y1="100" x2="775" y2="100" stroke="#2A2D33" stroke-width="1.5"/>
+  <line x1="875" y1="100" x2="883" y2="100" stroke="#2A2D33" stroke-width="1.5"/>
+
+  <!-- LIVE SCANNER badge -->
+  <rect x="779" y="154" width="92" height="24" rx="5"
+        fill="#1A1C20" stroke="#FF3B3B" stroke-width="1" stroke-opacity="0.85"/>
+  <circle cx="793" cy="166" r="4" fill="#FF3B3B" filter="url(#red-g)"/>
+  <text x="834" y="170" font-family="Arial,sans-serif" font-size="9" font-weight="800"
+        fill="#FF3B3B" text-anchor="middle" letter-spacing="2.5">LIVE SCANNER</text>
+
+  <!-- Bottom gold accent line -->
+  <rect y="197" width="900" height="3" fill="url(#gold-line)" rx="1.5"/>
+</svg>
