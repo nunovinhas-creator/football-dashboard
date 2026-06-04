@@ -979,11 +979,7 @@ def treble_banner_html(treble):
 
 def build_html(enriched_list, todays_treble=None):
     today = today_str()
-    # Portugal: UTC+1 (WEST, Abril–Outubro) / UTC+0 (WET, resto do ano)
-    _utc_now = datetime.now(timezone.utc)
-    _pt_offset = timedelta(hours=1) if 4 <= _utc_now.month <= 10 else timedelta(hours=0)
-    _pt_now = _utc_now + _pt_offset
-    now   = _pt_now.strftime("%Y-%m-%d %H:%M") + (" WEST" if _pt_offset.seconds else " WET")
+    now   = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     with_data = [e for e in enriched_list if has_pred_data(e["pred"])]
     banner_html   = treble_banner_html(todays_treble)
