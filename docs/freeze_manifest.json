@@ -1,0 +1,14 @@
+{
+  "frozen_since": "2026-06-10",
+  "frozen_at_utc": "2026-06-10T14:39:59Z",
+  "thresholds": {
+    "BTTS_MIN": 61,
+    "X12_MIN": 61,
+    "O25_XG": 2.9,
+    "EDGE_1X2": 0.07,
+    "EDGE_O25": 0.05,
+    "EDGE_BTTS": 0.06,
+    "PIN_2WAY_MARGIN": 1.025
+  },
+  "nota": "Tudo com date >= frozen_since e out-of-sample. Mudar threshold => avancar frozen_since para hoje."
+}

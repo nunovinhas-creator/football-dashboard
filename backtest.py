@@ -258,6 +258,42 @@ def _calc_goals_prediction(btts_frac, o25_frac, xgt):
         "pick_goals": o25_comb >= 0.60 and btts_frac >= 0.60,
     }
 
+def _pick_bet_close_odds(snapshots, ko_dt):
+    """
+    A partir dos snapshots acumulados, devolve (bet_odds_dict, close_odds_dict).
+    bet   = snapshot mais tardio com ts <= KO-30min (ou o primeiro disponível)
+    close = último snapshot com ts < KO (ou o último disponível)
+    Devolve (None, None) se não há snapshots ou ko_dt.
+    """
+    if not snapshots or not ko_dt:
+        return None, None
+    parsed = []
+    for s in snapshots:
+        try:
+            ts = datetime.fromisoformat(s["ts"].replace("Z", "+00:00"))
+            parsed.append((ts, s["odds"]))
+        except (KeyError, ValueError, AttributeError):
+            continue
+    if not parsed:
+        return None, None
+    parsed.sort(key=lambda x: x[0])
+    ko_minus_30 = ko_dt - timedelta(minutes=30)
+    # bet: mais tardio com ts <= KO-30min; fallback = primeiro snapshot
+    bet_odds = None
+    for ts, odds in parsed:
+        if ts <= ko_minus_30:
+            bet_odds = odds
+    if bet_odds is None:
+        bet_odds = parsed[0][1]
+    # close: último com ts < KO; fallback = último snapshot
+    close_odds = None
+    for ts, odds in parsed:
+        if ts < ko_dt:
+            close_odds = odds
+    if close_odds is None:
+        close_odds = parsed[-1][1]
+    return bet_odds, close_odds
+
 def make_record(pred, result):
     event   = pred.get("event") or {}
     markets = pred.get("markets") or {}
@@ -299,6 +335,10 @@ def make_record(pred, result):
 
     gp = _calc_goals_prediction(pb / 100, po / 100, xgt)
 
+    # Odds CLV — bet (snapshot mais próximo de KO-30min) e close (último antes KO)
+    _snapshots = pred.get("_odds_snapshots") or []
+    _bet, _close = _pick_bet_close_odds(_snapshots, dt)
+
     return {
         "date":     date_str,
         "event_id": event.get("id"),
@@ -329,6 +369,17 @@ def make_record(pred, result):
         "pin_away":  pin.get("away_odds"),
         "pin_btts":  pin.get("btts_yes"),
         "pin_o25":   pin.get("over_2_5"),
+        # CLV: odds na decisão (~KO-30min) e no fecho (último snapshot < KO)
+        "bet_pin_home":   _bet.get("home_odds")  if _bet   else None,
+        "bet_pin_draw":   _bet.get("draw_odds")  if _bet   else None,
+        "bet_pin_away":   _bet.get("away_odds")  if _bet   else None,
+        "bet_pin_o25":    _bet.get("over_2_5")   if _bet   else None,
+        "bet_pin_btts":   _bet.get("btts_yes")   if _bet   else None,
+        "close_pin_home": _close.get("home_odds") if _close else None,
+        "close_pin_draw": _close.get("draw_odds") if _close else None,
+        "close_pin_away": _close.get("away_odds") if _close else None,
+        "close_pin_o25":  _close.get("over_2_5")  if _close else None,
+        "close_pin_btts": _close.get("btts_yes")  if _close else None,
     }
 
 def migrate_picks(records):
@@ -1480,28 +1531,62 @@ def _run_save_mode(today, trebles):
         except Exception:
             pass
 
+    # Timestamp deste snapshot (UTC, ISO 8601)
+    snap_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     if not preds_saved:
         _log("INFO", f"SAVE: a guardar predições de {today}...")
         preds_fresh = fetch_todays_predictions()
         _log("INFO", f"{len(preds_fresh)} predições para {today}")
         if preds_fresh:
+            # Inicializar _odds_snapshots com o primeiro snapshot
+            for p in preds_fresh:
+                pin = p.get("_pinnacle_odds") or {}
+                if pin:
+                    p["_odds_snapshots"] = [{"ts": snap_ts, "odds": pin}]
             _tmp = save_file + ".tmp"
             with open(_tmp, "w", encoding="utf-8") as f:
                 json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
             os.replace(_tmp, save_file)
             _log("INFO", f"{save_file} guardado ✓")
     else:
-        _log("INFO", f"SAVE: {save_file} existe ({len(preds_saved)}) — a verificar novos jogos...")
+        _log("INFO", f"SAVE: {save_file} existe ({len(preds_saved)}) — a actualizar snapshots...")
         preds_fresh = fetch_todays_predictions()
-        if len(preds_fresh) > len(preds_saved):
-            _log("INFO", f"+{len(preds_fresh) - len(preds_saved)} jogos novos — a actualizar {save_file}")
-            _tmp = save_file + ".tmp"
-            with open(_tmp, "w", encoding="utf-8") as f:
-                json.dump(preds_fresh, f, ensure_ascii=False, separators=(",", ":"))
-            os.replace(_tmp, save_file)
-            _log("INFO", f"{save_file} actualizado ✓")
+        # Mapa event_id → pred existente (preserva _odds_snapshots anteriores)
+        existing_map = {
+            (p.get("event") or {}).get("id"): p
+            for p in preds_saved
+            if (p.get("event") or {}).get("id")
+        }
+        merged = []
+        fresh_ids = set()
+        for p in preds_fresh:
+            eid = (p.get("event") or {}).get("id")
+            fresh_ids.add(eid)
+            pin = p.get("_pinnacle_odds") or {}
+            # Preservar snapshots do ficheiro existente
+            prev_snaps = (existing_map.get(eid) or {}).get("_odds_snapshots") or []
+            new_snaps = list(prev_snaps)
+            # Acrescentar novo snapshot se houver odds e ts não repetido
+            if pin and (not new_snaps or new_snaps[-1].get("ts") != snap_ts):
+                new_snaps.append({"ts": snap_ts, "odds": pin})
+            p["_odds_snapshots"] = new_snaps
+            merged.append(p)
+        # Preservar eventos que existiam mas não voltaram no fresh
+        for p in preds_saved:
+            eid = (p.get("event") or {}).get("id")
+            if eid not in fresh_ids:
+                merged.append(p)
+        n_new = len(merged) - len(preds_saved)
+        if n_new > 0:
+            _log("INFO", f"+{n_new} jogos novos — a actualizar {save_file}")
         else:
-            _log("INFO", f"SAVE: sem novos jogos ({len(preds_saved)} existentes) — a saltar")
+            _log("INFO", f"Snapshots actualizados ({len(merged)} predicoes, ts={snap_ts})")
+        _tmp = save_file + ".tmp"
+        with open(_tmp, "w", encoding="utf-8") as f:
+            json.dump(merged, f, ensure_ascii=False, separators=(",", ":"))
+        os.replace(_tmp, save_file)
+        _log("INFO", f"{save_file} actualizado ✓")
 
     today_built = any(t.get("date") == today for t in trebles.get("pending", []))
     if not today_built and os.path.exists(save_file):

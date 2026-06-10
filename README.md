@@ -16,7 +16,7 @@
 <div align="center">
 
 <!-- STATS_START -->
-![Records](https://img.shields.io/badge/Registos-470-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-75.0%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-64.2%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-57.3%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F9-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--10-555555?style=flat-square&labelColor=0d1117)
+![Records](https://img.shields.io/badge/Registos-359-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-83.3%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-65.7%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-60.5%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F8-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--04-555555?style=flat-square&labelColor=0d1117)
 <!-- STATS_END -->
 
 </div>
@@ -78,7 +78,7 @@ Pinnacle ──┤──► fetch_odds(event_id)    ← apenas jogos de hoje (pe
 > Dados actualizados automaticamente pelo CI a cada run. Amostra: 349 registos, 16 dias.
 
 <!-- STATS_START -->
-![Records](https://img.shields.io/badge/Registos-470-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-75.0%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-64.2%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-57.3%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F9-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--10-555555?style=flat-square&labelColor=0d1117)
+![Records](https://img.shields.io/badge/Registos-359-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-83.3%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-65.7%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-60.5%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F8-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--04-555555?style=flat-square&labelColor=0d1117)
 <!-- STATS_END -->
 
 | Mercado | Picks | Hits | Hit Rate | Critério de selecção |
@@ -250,16 +250,46 @@ football-dashboard/
 
 ---
 
+## 📐 Análise ROI / CLV / Out-of-Sample
+
+O hit rate sozinho **não mede rentabilidade** — podes acertar 70% e perder dinheiro se as odds médias forem baixas. Esta camada resolve isso.
+
+### O que é medido
+
+| Módulo | Ficheiro gerado | Descrição |
+|--------|----------------|-----------|
+| **ROI por mercado** | [`docs/analytics_report.txt`](docs/analytics_report.txt) | Lucro/prejuízo real em unidades, odds média, breakeven |
+| **Value unificado** | idem | Reconstrói exactamente os picks que o `detect_value` sinaliza e mede-lhes o ROI — deixa de medir uma coisa e apostar outra |
+| **CLV** | idem (em recolha) | *Closing Line Value* — bateste a linha de fecho? É o melhor preditor de edge real a longo prazo |
+| **Out-of-sample** | [`docs/analytics_report_oos.txt`](docs/analytics_report_oos.txt) | Só dados que os thresholds nunca viram (forward test honesto) |
+
+### Congelamento dos thresholds
+
+Os thresholds foram calibrados in-sample sobre dados anteriores a **`2026-06-10`** (ver [`docs/freeze_manifest.json`](docs/freeze_manifest.json)). Tudo a partir dessa data é **out-of-sample** — o único teste que importa. Se um threshold mudar, a data avança para hoje.
+
+> **Regra de leitura:** `A PERDER ❌` = acertas muito mas as odds não cobrem.  
+> CLV+ consistente vale mais do que ROI+ em amostras pequenas (< 200 apostas).
+
+### Como consultar
+
+```bash
+python mdb_analytics.py        # relatório completo (in-sample + OOS)
+python mdb_analytics.py --oos  # só out-of-sample (>= 2026-06-10)
+```
+
+---
+
 ## 🕐 Calendário CI/CD
 
 | Hora UTC | Acção | O que faz |
 |----------|-------|-----------|
-| `07:00` | SAVE + Email | Snapshot predicoes, email diário se configurado |
-| `12:00` | SAVE | Snapshot predicoes (mercados asiáticos abertos) |
-| `14:00` | SAVE | Snapshot predicoes |
-| `18:30` | SAVE + Telegram | Snapshot + alerta antes da janela europeia |
-| `21:00` | SAVE | Snapshot final do dia |
-| `00:00` | SCORE | Resultados reais → scoring → ROI → backtest.html |
+| `07:00` | SAVE + Email | Snapshot predicoes + odds Pinnacle, email diário |
+| `12:00` | SAVE | Snapshot (mercados asiáticos abertos) |
+| `14:00` | SAVE | Snapshot |
+| `18:30` | SAVE + Telegram | Snapshot pré-fecho europeu (odds CLV) + alerta |
+| `20:45` | SAVE | Snapshot pré-fecho tardio (odds CLV para jogos noturnos) |
+| `21:00` | SAVE | Snapshot final |
+| `00:00` | SCORE + Analytics | Resultados → scoring → ROI → `analytics_report*.txt` → `backtest.html` |
 
 ---
 
@@ -270,6 +300,8 @@ football-dashboard/
 - [x] Tripla diária automática com gestão de bankroll
 - [x] Backtest com histórico cumulativo
 - [x] Alertas Telegram
+- [x] ROI por mercado + congelamento OOS (`mdb_analytics.py`)
+- [x] CLV em recolha (snapshots de odds acumulados por evento)
 - [x] Dashboard multi-dia (filtro por data)
 - [x] Análise de calibração + overconfidence
 - [x] Stats auto-actualizadas no README via CI
