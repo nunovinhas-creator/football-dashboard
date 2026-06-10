@@ -1,0 +1,23 @@
+════════════════════════════════════════════════════════════════
+  MATEMÁTICA DA BOLA — Análise ROI/CLV/Value · TODOS os registos (in+out)
+════════════════════════════════════════════════════════════════
+Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 0 | total: 370
+Registos neste relatório: 370
+
+── PONTO 1 · ROI por mercado (SINGLES) ──────────────────────────
+  1X2      12 picks · 10 hits · 83.3% (IC95 55.2-95.3%)
+      ROI: N/D (sem odds guardadas)
+  Over2.5  76 picks · 46 hits · 60.5% (IC95 49.3-70.8%)
+      ROI: N/D (sem odds guardadas)
+  BTTS     70 picks · 46 hits · 65.7% (IC95 54.0-75.8%)
+      ROI: N/D (sem odds guardadas)
+
+── PONTO 3 · Value unificado (edge vs Pinnacle) ─────────────────
+  Nenhuma aposta de value no histórico (edge nunca superou threshold).
+
+── PONTO 2 · CLV (Closing Line Value) ───────────────────────────
+  Sem odds de aposta+fecho ainda. Ver _CLV_SETUP.
+
+════════════════════════════════════════════════════════════════
+Leitura: 'A PERDER ❌' = acertas muito mas as odds não cobrem. CLV+ consistente vale mais que ROI+ em amostra pequena.
+════════════════════════════════════════════════════════════════
