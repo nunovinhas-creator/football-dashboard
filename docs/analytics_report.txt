@@ -1,8 +1,8 @@
 ════════════════════════════════════════════════════════════════
   MATEMÁTICA DA BOLA — Análise ROI/CLV/Value · TODOS os registos (in+out)
 ════════════════════════════════════════════════════════════════
-Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 9 | total: 379
-Registos neste relatório: 379
+Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 10 | total: 380
+Registos neste relatório: 380
 
 ── PONTO 1 · ROI por mercado (SINGLES) ──────────────────────────
   1X2      12 picks · 10 hits · 83.3% (IC95 55.2-95.3%)

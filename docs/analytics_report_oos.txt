@@ -1,8 +1,8 @@
 ════════════════════════════════════════════════════════════════
   MATEMÁTICA DA BOLA — Análise ROI/CLV/Value · OUT-OF-SAMPLE (>= 2026-06-10)
 ════════════════════════════════════════════════════════════════
-Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 9 | total: 379
-Registos neste relatório: 9
+Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 10 | total: 380
+Registos neste relatório: 10
 ⚠️  OOS ainda < 100 registos — nada é conclusivo. Continuar a recolher.
 
 ── PONTO 1 · ROI por mercado (SINGLES) ──────────────────────────
