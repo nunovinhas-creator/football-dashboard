@@ -1,7 +1,7 @@
 name: C2 Diagnóstico Snapshots
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # disparo manual no browser do GitHub
 
 permissions:
   contents: write
@@ -22,15 +22,19 @@ jobs:
       - name: Correr diagnóstico
         run: python diagnose_snapshots.py | tee docs/diag_c2.txt
 
-      - name: Correr analytics
+      - name: Correr mdb_analytics (relatório completo)
+        env:
+          MDB_HISTORY: docs/history.json
         run: |
-          python mdb_analytics.py > docs/analytics_report.txt || true
-          python mdb_analytics.py --oos > docs/analytics_report_oos.txt || true
+          python mdb_analytics.py        > docs/analytics_report.txt     || true
+          python mdb_analytics.py --oos  > docs/analytics_report_oos.txt || true
 
       - name: Commit resultados
         run: |
-          git config user.name "github-actions[bot]"
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/diag_c2.txt docs/analytics_report.txt docs/analytics_report_oos.txt docs/freeze_manifest.json || true
-          git diff --staged --quiet || git commit -m "diag: C2 diagnóstico $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git add docs/diag_c2.txt docs/analytics_report.txt \
+                  docs/analytics_report_oos.txt docs/freeze_manifest.json || true
+          git diff --staged --quiet || \
+            git commit -m "diag: C2 diagnóstico snapshots + relatório analytics $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push origin main
