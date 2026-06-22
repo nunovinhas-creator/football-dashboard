@@ -16,7 +16,7 @@
 <div align="center">
 
 <!-- STATS_START -->
-![Records](https://img.shields.io/badge/Registos-467-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-73.3%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-64.9%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-62.7%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F8-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--22-555555?style=flat-square&labelColor=0d1117)
+![Records](https://img.shields.io/badge/Registos-467-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-73.3%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-64.9%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-62.7%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F8-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--21-555555?style=flat-square&labelColor=0d1117)
 <!-- STATS_END -->
 
 </div>
@@ -75,18 +75,18 @@ Pinnacle ──┤──► fetch_odds(event_id)    ← apenas jogos de hoje (pe
 
 ## 📊 Performance ao Vivo
 
-> Dados actualizados automaticamente pelo CI a cada run. Amostra: 349 registos, 16 dias.
+> Dados actualizados automaticamente pelo CI a cada run. Amostra: 467 registos, 29 dias.
 
 <!-- STATS_START -->
-![Records](https://img.shields.io/badge/Registos-467-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-73.3%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-64.9%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-62.7%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F8-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--22-555555?style=flat-square&labelColor=0d1117)
+![Records](https://img.shields.io/badge/Registos-467-00FF88?style=flat-square&labelColor=0d1117)&nbsp;![1X2](https://img.shields.io/badge/1X2_Pick-73.3%25-A855F7?style=flat-square&labelColor=0d1117)&nbsp;![BTTS](https://img.shields.io/badge/BTTS_Pick-64.9%25-00CCFF?style=flat-square&labelColor=0d1117)&nbsp;![O25](https://img.shields.io/badge/Over_2.5-62.7%25-F59E0B?style=flat-square&labelColor=0d1117)&nbsp;![Trebles](https://img.shields.io/badge/Triplas-5%2F8-FF6B6B?style=flat-square&labelColor=0d1117)&nbsp;![Updated](https://img.shields.io/badge/Updated-2026--06--21-555555?style=flat-square&labelColor=0d1117)
 <!-- STATS_END -->
 
 | Mercado | Picks | Hits | Hit Rate | Critério de selecção |
 |---------|------:|-----:|---------:|---------------------|
-| 1X2 | 12 | 10 | **83.3%** | `best ≥ 61% AND conf == MÉDIA` |
-| BTTS | 70 | 46 | **65.7%** | `prob_btts ≥ 61% AND conf ∈ {ALTA, MÉDIA}` |
-| Over 2.5 | 75 | 45 | **60.0%** | `xg_total ≥ 2.9 AND conf ∈ {ALTA, MÉDIA}` |
-| Triplas | 7 | 5 | **71.4%** | 3 picks BTTS/1X2, máx 1 por liga |
+| 1X2 | 15 | 11 | **73.3%** | `best ≥ 61% AND conf == MÉDIA` |
+| BTTS | 77 | 50 | **64.9%** | `prob_btts ≥ 61% AND conf ∈ {ALTA, MÉDIA}` |
+| Over 2.5 | 83 | 52 | **62.7%** | `xg_total ≥ 2.9 AND conf ∈ {ALTA, MÉDIA}` |
+| Triplas | 8 | 5 | **62.5%** | 3 picks BTTS/1X2, máx 1 por liga | 7 | 5 | **71.4%** | 3 picks BTTS/1X2, máx 1 por liga |
 
 ### Value Detection por Mercado
 
