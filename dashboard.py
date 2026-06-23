@@ -1187,7 +1187,7 @@ def send_telegram(enriched_list, todays_treble=None):
 
     if not strong_value:
         _log("INFO", "[OBS] Sem value detectado hoje — sem TG")
-        return
+        return False
 
     val_lines = []
     for v in strong_value[:5]:
@@ -1218,6 +1218,7 @@ def send_telegram(enriched_list, todays_treble=None):
     header = f"⚽ *Matemática Da Bola \\[OBS\\] — {today}*\n💎 VALUE DETECTADO — {len(strong_value)} picks\n"
     _tg_send(header)
     _tg_send("💎 *VALUE DETECTADO*\n" + "\n\n".join(val_lines))
+    return True
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PONTO DE ENTRADA
@@ -1317,8 +1318,8 @@ def main():
     os.replace(_tmp, "docs/dashboard.html")
     _log("INFO", "docs/dashboard.html guardado")
 
-    send_telegram(enriched_list, todays_treble)
-    _log("INFO", "Telegram enviado ✓")
+    if send_telegram(enriched_list, todays_treble):
+        _log("INFO", "Telegram enviado ✓")
 
 if __name__ == "__main__":
     main()
