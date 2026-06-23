@@ -1160,70 +1160,9 @@ def send_telegram(enriched_list, todays_treble=None):
         if e["match"].get("event_date", "")[:10] == tg_date
     ]
 
-    # ── 1. Tripla do dia ──────────────────────────────────────────────────────
-    treble  = todays_treble
-    if treble:
-        picks_lines = []
-        for i, pk in enumerate(treble.get("picks", []), 1):
-            conf    = pk.get("conf", "")
-            mkt_key = pk.get("market", "")
-            mkt     = _MKT_LABEL.get(mkt_key, mkt_key or "?")
-            odds    = f" @{pk['odds']:.2f}" if pk.get("odds") else ""
-            flag    = league_flag(pk.get("league", ""))
-            picks_lines.append(
-                f"`{i}` {flag} *{escape_md(pk.get('home', '?'))} vs {escape_md(pk.get('away', '?'))}*\n"
-                f"   {mkt} · {int((pk.get('prob') or 0)*100)}% · _{conf}_{odds}"
-            )
-        combined = f"\n💰 Odds combinadas: *{treble['combined_odds']:.2f}*" if treble.get("combined_odds") else ""
-        blocks.append("🎯 *TRIPLA DO DIA*\n" + "\n\n".join(picks_lines) + combined)
-    else:
-        blocks.append("🎯 *TRIPLA DO DIA*\n_Picks insuficientes hoje._")
+    # blocos 1 (Tripla) e 2 (xG/Over 2.5) silenciados — não enviam Telegram
 
-    # ── 2. xG do dia — candidatos Over 2.5 ───────────────────────────────────
-    xg_candidates = []
-    for e in enriched_list:
-        pred = e.get("pred", {}) or {}
-        conf_val = e.get("confidence")
-        if conf_val is None:
-            continue
-        try:
-            conf_f = float(conf_val)
-        except (TypeError, ValueError):
-            continue
-        if conf_f < 0.45:   # só ALTA e MÉDIA
-            continue
-        hx = pred.get("home_xg") or 0
-        ax = pred.get("away_xg") or 0
-        xgt = round(float(hx) + float(ax), 2)
-        if xgt < 2.9:
-            continue
-        conf_lbl = "ALTA" if conf_f >= 0.65 else "MÉDIA"
-        m = e["match"]
-        gp = predict_goals(hx, ax, pred.get("btts_yes") or 0, pred.get("over_2_5") or 0)
-        xg_candidates.append({
-            "xgt":    xgt,
-            "conf":   conf_lbl,
-            "league": m.get("_league_name", ""),
-            "home":   m.get("home_team", "?"),
-            "away":   m.get("away_team", "?"),
-            "gp":     gp,
-        })
-
-    xg_candidates.sort(key=lambda x: -x["xgt"])
-    if xg_candidates:
-        xg_lines = []
-        for c in xg_candidates[:5]:
-            flag = league_flag(c["league"])
-            gp   = c["gp"]
-            verd = f" · _{gp['verdict']}_" if gp else ""
-            rng  = f" · {gp['range']} golos" if gp else ""
-            xg_lines.append(
-                f"{flag} *{escape_md(c['home'])} vs {escape_md(c['away'])}*\n"
-                f"   xG: *{c['xgt']}*{rng}{verd}"
-            )
-        blocks.append("📈 *xG ELEVADO — Over 2.5*\n" + "\n\n".join(xg_lines))
-
-    # ── 3. Value detectado (confiança ALTA; thresholds: 1X2=7%, BTTS=6%, Over2.5=5%) ──
+    # ── Value detectado (confiança ALTA; thresholds: 1X2=7%, BTTS=6%, Over2.5=5%) ──
     _mkt_tg = {"BTTS": "🔁 BTTS", "Over2.5": "📈 Over 2.5",
                "1X2": {"HOME": "🏠 1X2 Casa", "DRAW": "🤝 1X2 Empate", "AWAY": "✈️ 1X2 Fora"}}
     strong_value = []
@@ -1245,20 +1184,23 @@ def send_telegram(enriched_list, todays_treble=None):
             })
 
     strong_value.sort(key=lambda x: -x["edge"])
-    if strong_value:
-        val_lines = []
-        for v in strong_value[:5]:
-            flag = league_flag(v["league"])
-            mkt_entry = _mkt_tg.get(v["market"], v["market"])
-            mkt = mkt_entry.get(v.get("side", ""), v["market"]) if isinstance(mkt_entry, dict) else mkt_entry
-            odds_str = f" @{v['pin_odds']:.2f}" if v.get("pin_odds") else ""
-            val_lines.append(
-                f"{flag} *{escape_md(v['home'])} vs {escape_md(v['away'])}*\n"
-                f"   {mkt} · ML {v['ml_prob']*100:.0f}% · fair {v['fair_prob']*100:.1f}%{odds_str} · edge *+{v['edge']*100:.1f}%*"
-            )
-        blocks.append("💎 *VALUE DETECTADO*\n" + "\n\n".join(val_lines))
 
-    # ── Enviar em mensagens separadas (cada bloco = 1 msg) ───────────────────
+    if not strong_value:
+        _log("INFO", "[OBS] Sem value detectado hoje — sem TG")
+        return
+
+    val_lines = []
+    for v in strong_value[:5]:
+        flag = league_flag(v["league"])
+        mkt_entry = _mkt_tg.get(v["market"], v["market"])
+        mkt = mkt_entry.get(v.get("side", ""), v["market"]) if isinstance(mkt_entry, dict) else mkt_entry
+        odds_str = f" @{v['pin_odds']:.2f}" if v.get("pin_odds") else ""
+        val_lines.append(
+            f"{flag} *{escape_md(v['home'])} vs {escape_md(v['away'])}*\n"
+            f"   {mkt} · ML {v['ml_prob']*100:.0f}% · fair {v['fair_prob']*100:.1f}%{odds_str} · edge *+{v['edge']*100:.1f}%*"
+        )
+
+    # ── Enviar apenas Value ───────────────────────────────────────────────────
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
 
     def _tg_send(text):
@@ -1273,10 +1215,9 @@ def send_telegram(enriched_list, todays_treble=None):
                 else:
                     _log("WARN", f"telegram falhou após {attempt+1} tentativas: {e}")
 
-    header = f"⚽ *Matemática Da Bola — {today}* · {len(enriched_list)} jogos\n"
+    header = f"⚽ *Matemática Da Bola \\[OBS\\] — {today}*\n💎 VALUE DETECTADO — {len(strong_value)} picks\n"
     _tg_send(header)
-    for block in blocks:
-        _tg_send(block)
+    _tg_send("💎 *VALUE DETECTADO*\n" + "\n\n".join(val_lines))
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PONTO DE ENTRADA
