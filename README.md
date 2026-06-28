@@ -86,7 +86,7 @@ Pinnacle ──┤──► fetch_odds(event_id)    ← apenas jogos de hoje (pe
 | 1X2 | 15 | 11 | **73.3%** | `best ≥ 61% AND conf == MÉDIA` |
 | BTTS | 77 | 50 | **64.9%** | `prob_btts ≥ 61% AND conf ∈ {ALTA, MÉDIA}` |
 | Over 2.5 | 83 | 52 | **62.7%** | `xg_total ≥ 2.9 AND conf ∈ {ALTA, MÉDIA}` |
-| Triplas | 8 | 5 | **62.5%** | 3 picks BTTS/1X2, máx 1 por liga | 8 | 5 | **62.5%** | 3 picks BTTS/1X2, máx 1 por liga | 7 | 5 | **71.4%** | 3 picks BTTS/1X2, máx 1 por liga |
+| Triplas | 8 | 5 | **62.5%** | 3 picks BTTS/1X2, máx 1 por liga | 7 | 5 | **71.4%** | 3 picks BTTS/1X2, máx 1 por liga |
 
 ### Value Detection por Mercado
 
