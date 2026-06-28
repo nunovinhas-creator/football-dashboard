@@ -17,7 +17,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependências
-        run: pip install requests --quiet
+        run: pip install requests pandera pandas --quiet
 
       - name: Correr diagnóstico
         run: python diagnose_snapshots.py | tee docs/diag_c2.txt

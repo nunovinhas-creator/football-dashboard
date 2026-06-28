@@ -14,6 +14,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text      import MIMEText
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
+from record_schema import validate_record
 
 BSD_KEY      = os.environ["BSD_API_KEY"]
 BASE         = "https://sports.bzzoiro.com/api/v2"
@@ -339,7 +340,7 @@ def make_record(pred, result):
     _snapshots = pred.get("_odds_snapshots") or []
     _bet, _close = _pick_bet_close_odds(_snapshots, dt)
 
-    return {
+    rec = {
         "date":     date_str,
         "event_id": event.get("id"),
         "league":   event.get("league_name", "?"),
@@ -381,6 +382,8 @@ def make_record(pred, result):
         "close_pin_o25":  _close.get("over_2_5")  if _close else None,
         "close_pin_btts": _close.get("btts_yes")  if _close else None,
     }
+    validate_record(rec)
+    return rec
 
 def migrate_picks(records):
     """Recalcula pick_* para todos os registos com os novos thresholds."""
