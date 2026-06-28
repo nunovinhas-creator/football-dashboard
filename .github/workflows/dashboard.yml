@@ -77,9 +77,10 @@ jobs:
           # 1. Buscar estado actual do remote (pode ter avançado durante os 5-6 min do run)
           git fetch origin main
 
-          # 2. Soft reset: move HEAD para origin/main sem apagar os ficheiros gerados
-          #    (working tree preservado — não há conflito de rebase possível)
-          git reset --soft origin/main
+          # 2. Mixed reset: move HEAD E índice para origin/main sem apagar os ficheiros gerados
+          #    (working tree preservado; índice actualizado → impede que ficheiros de workflow
+          #    apareçam como "modificados" no commit quando o main avança durante o run)
+          git reset --mixed origin/main
 
           # 3. Proteger dados JSON contra regressão:
           #    Se o remote tem uma versão maior (mais registos/dados), usá-la.
