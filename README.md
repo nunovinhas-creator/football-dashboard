@@ -4,6 +4,8 @@
 
 <br/>
 
+📋 Documentação interna e índice de portfólio mantidos em repositório privado.
+
 <div align="center">
 
 [![CI Status](https://github.com/nunovinhas-creator/football-dashboard/actions/workflows/dashboard.yml/badge.svg?style=flat-square)](https://github.com/nunovinhas-creator/football-dashboard/actions/workflows/dashboard.yml)&nbsp;
