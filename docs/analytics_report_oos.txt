@@ -1,15 +1,15 @@
 ════════════════════════════════════════════════════════════════
   MATEMÁTICA DA BOLA — Análise ROI/CLV/Value · OUT-OF-SAMPLE (>= 2026-06-10)
 ════════════════════════════════════════════════════════════════
-Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 1159 | total: 1529
-Registos neste relatório: 1159
+Congelado em: 2026-06-10 | in-sample: 370 | out-of-sample: 1277 | total: 1647
+Registos neste relatório: 1277
 
 ── PONTO 1 · ROI por mercado (SINGLES) ──────────────────────────
-  1X2      73 picks · 35 hits · 47.9% (IC95 36.9-59.2%)
+  1X2      76 picks · 36 hits · 47.4% (IC95 36.5-58.4%)
       ROI: N/D (sem odds guardadas)
-  Over2.5  253 picks · 148 hits · 58.5% (IC95 52.3-64.4%)
+  Over2.5  270 picks · 160 hits · 59.3% (IC95 53.3-65.0%)
       ROI: N/D (sem odds guardadas)
-  BTTS     121 picks · 72 hits · 59.5% (IC95 50.6-67.8%)
+  BTTS     127 picks · 77 hits · 60.6% (IC95 51.9-68.7%)
       ROI: N/D (sem odds guardadas)
 
 ── PONTO 3 · Value unificado (edge vs Pinnacle) ─────────────────
