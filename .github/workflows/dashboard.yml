@@ -6,13 +6,15 @@ on:
     paths:
       - "dashboard.py"
       - "backtest.py"
+      - "mdb_analytics.py"
   schedule:
     - cron: "0 7 * * *"    # 07:00 — SAVE + email diário
     - cron: "0 12 * * *"   # 12:00 — SAVE midday (mercados asiáticos abertos)
     - cron: "0 14 * * *"   # 14:00 — SAVE
-    - cron: "30 18 * * *"  # 18:30 — SAVE + Telegram antes da janela europeia
+    - cron: "30 18 * * *"  # 18:30 — SAVE + snapshot pré-fecho europeu (CLV)
+    - cron: "45 20 * * *"  # 20:45 — SAVE + snapshot pré-fecho tardio (CLV)
     - cron: "0 21 * * *"   # 21:00 — SAVE
-    - cron: "0 0 * * *"    # 00:00 — SCORE
+    - cron: "0 0 * * *"    # 00:00 — SCORE + analytics report
   workflow_dispatch:
 
 concurrency:
@@ -45,7 +47,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependências
-        run: pip install requests
+        run: pip install requests pandera pandas --quiet
 
       - name: Correr dashboard
         env:
@@ -62,6 +64,11 @@ jobs:
           FORCE_EMAIL:         ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: python backtest.py
 
+      - name: Gerar relatórios de analytics (ROI / CLV / OOS)
+        run: |
+          python mdb_analytics.py       > docs/analytics_report.txt     2>&1 || true
+          python mdb_analytics.py --oos > docs/analytics_report_oos.txt 2>&1 || true
+
       - name: Commit e push
         run: |
           git config user.name  "github-actions[bot]"
@@ -70,9 +77,10 @@ jobs:
           # 1. Buscar estado actual do remote (pode ter avançado durante os 5-6 min do run)
           git fetch origin main
 
-          # 2. Soft reset: move HEAD para origin/main sem apagar os ficheiros gerados
-          #    (working tree preservado — não há conflito de rebase possível)
-          git reset --soft origin/main
+          # 2. Mixed reset: move HEAD E índice para origin/main sem apagar os ficheiros gerados
+          #    (working tree preservado; índice actualizado → impede que ficheiros de workflow
+          #    apareçam como "modificados" no commit quando o main avança durante o run)
+          git reset --mixed origin/main
 
           # 3. Proteger dados JSON contra regressão:
           #    Se o remote tem uma versão maior (mais registos/dados), usá-la.
@@ -91,9 +99,8 @@ jobs:
           # 4. Adicionar todos os ficheiros gerados
           #    HTML: sempre sobrepõe (idempotente — regenerado a cada run)
           #    JSON: versão mais completa (step 3 já garantiu isso)
-          git add docs/dashboard.html docs/backtest.html \
-                  docs/history.json docs/trebles.json \
-                  docs/preds_*.json README.md 2>/dev/null || true
+          #    TXT: relatórios de analytics (ROI / CLV / OOS)
+          git add docs/ record_schema.py diagnose_snapshots.py || true
 
           # 5. Commitar apenas se houver alterações vs. origin/main
           git diff --staged --quiet || git commit -m "update: $(date -u +%Y-%m-%dT%H:%M)"

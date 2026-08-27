@@ -325,3 +325,55 @@ Se os scripts não puderem correr localmente (falta de `docs/history.json` váli
 The `docs/` directory is committed on every CI run and can be served via GitHub Pages (set source to `docs/` folder on `main` branch). The main page is `docs/dashboard.html`.
 
 All `docs/preds_*.json` files are kept indefinitely as historical snapshots for backtesting.
+
+---
+
+## Subagentes Claude Code (`.claude/agents/`)
+
+Quatro subagentes especializados para análise assistida. Invocar via `/scan` ou directamente.
+
+| Ficheiro | Modelo | Função |
+|----------|--------|--------|
+| `data-fetcher.md` | haiku | Lê `docs/preds_*.json` mais recente e `docs/history.json`; devolve contagens, ligas, estado de snapshots e CLV |
+| `model-runner.md` | sonnet | Aplica thresholds v3 às predições do dia; reporta top picks 1X2/Over2.5/BTTS com probabilidade e edge; constrói tripla |
+| `analytics-tracker.md` | haiku | Lê `mdb_analytics.py` outputs; reporta ROI/CLV por mercado; verifica thresholds v3 e freeze manifest |
+| `telegram-notifier.md` | haiku | Avalia picks contra 5 critérios (threshold + edge + CLV + liga + duplicado); só dispara se todos cumpridos; nunca envia alerta falso |
+
+### Regras dos subagentes
+
+- Nenhum subagente altera `dashboard.py`, `backtest.py` ou `mdb_analytics.py`
+- Nenhum subagente faz chamadas de rede directas (só lêem ficheiros locais)
+- `telegram-notifier` formata mas nunca envia — o envio é responsabilidade de `send_telegram()` em `dashboard.py`
+- Se Pinnacle não disponível (ex: Mundial 2026), o critério de edge é relaxado com nota explícita
+
+---
+
+## Comando /scan (`.claude/commands/scan.md`)
+
+Orquestrador que corre os 4 agentes em sequência e apresenta tabela de estado consolidada:
+
+```
+1. data-fetcher     → leitura de dados brutos
+2. model-runner     → análise de picks e tripla
+3. analytics-tracker → ROI/CLV/thresholds
+4. telegram-notifier → decisão de envio
+```
+
+Output final: tabela ASCII com status de cada agente + picks qualificados + mensagem Telegram formatada (se aplicável).
+
+Usar `/scan` antes de qualquer run manual ou para verificar o estado do sistema sem executar os scripts principais.
+
+---
+
+## Workflow Update README (`.github/workflows/update_readme.yml`)
+
+Actualiza automaticamente as secções dinâmicas do `README.md` quando `docs/history.json`, `docs/preds_*.json` ou `mdb_analytics.py` mudam em `main`.
+
+**Script:** `scripts/generate_readme.py`
+- Lê `docs/history.json` e `docs/trebles.json`
+- Calcula hit rates reais (1X2, BTTS, O25, Triplas)
+- Substitui os blocos `<!-- STATS_START --> ... <!-- STATS_END -->` com badges actualizados
+- Actualiza a tabela de performance ao vivo
+- Commit automático com `[skip ci]` para não criar loop infinito
+
+**Trigger:** push para `main` com alterações em `docs/history.json`, `docs/preds_*.json` ou `mdb_analytics.py`.
